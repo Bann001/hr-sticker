@@ -1,6 +1,6 @@
 import { useRef, useEffect, useState, useCallback } from 'react';
 import type { LayoutConfig, StickerData, Product, FontConfig } from '../types';
-import { generatePDF, loadImage, drawStickerPreview } from '../utils/pdf';
+import { generatePDF, loadImage, renderSticker } from '../utils/pdf';
 
 interface Props {
   stickers: StickerData[];
@@ -10,6 +10,8 @@ interface Props {
   logoDataUrl?: string;
   visible: boolean;
 }
+
+const PREVIEW_DPI = 72;
 
 export function Preview({ stickers, product, layout, fonts, logoDataUrl, visible }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -22,52 +24,49 @@ export function Preview({ stickers, product, layout, fonts, logoDataUrl, visible
 
   const pageStickers = stickers.slice(page * perPage, (page + 1) * perPage);
 
-  // Draw preview
   useEffect(() => {
     if (!visible || !canvasRef.current || !product) return;
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d')!;
 
-    const scale = 72 / 25.4;
-    const pw = 210 * scale * zoom;
-    const ph = 297 * scale * zoom;
+    const pmm = PREVIEW_DPI / 25.4;
+    const pw = 210 * pmm * zoom;
+    const ph = 297 * pmm * zoom;
 
     canvas.width = pw;
     canvas.height = ph;
     ctx.clearRect(0, 0, pw, ph);
 
-    // Page background
     ctx.fillStyle = '#fff';
     ctx.fillRect(0, 0, pw, ph);
 
     ctx.scale(zoom, zoom);
 
-    // Draw stickers
     for (let i = 0; i < pageStickers.length; i++) {
       const row = Math.floor(i / layout.cols);
       const col = i % layout.cols;
       const x = layout.margin_left_mm + col * (layout.sticker_width_mm + layout.spacing_h_mm);
       const y = layout.margin_top_mm + row * (layout.sticker_height_mm + layout.spacing_v_mm);
 
-      drawStickerPreview(ctx, x, y, layout.sticker_width_mm, layout.sticker_height_mm, pageStickers[i], product, fonts, logoDataUrl);
+      renderSticker(ctx, x, y, layout.sticker_width_mm, layout.sticker_height_mm, PREVIEW_DPI, pageStickers[i], product, fonts, logoDataUrl);
     }
 
     // Cut guides
-    ctx.setLineDash([1.5 * scale / 72 * 25.4, 2 * scale / 72 * 25.4]);
+    ctx.setLineDash([1.5 * pmm / (72 / 25.4), 2 * pmm / (72 / 25.4)]);
     ctx.strokeStyle = 'rgba(0,0,0,0.06)';
     ctx.lineWidth = 0.15;
     for (let col = 1; col < layout.cols; col++) {
       const gx = layout.margin_left_mm + col * (layout.sticker_width_mm + layout.spacing_h_mm) - layout.spacing_h_mm / 2;
       ctx.beginPath();
-      ctx.moveTo(gx * scale, layout.margin_top_mm * scale);
-      ctx.lineTo(gx * scale, (layout.margin_top_mm + layout.rows * (layout.sticker_height_mm + layout.spacing_v_mm) - layout.spacing_v_mm) * scale);
+      ctx.moveTo(gx * pmm, layout.margin_top_mm * pmm);
+      ctx.lineTo(gx * pmm, (layout.margin_top_mm + layout.rows * (layout.sticker_height_mm + layout.spacing_v_mm) - layout.spacing_v_mm) * pmm);
       ctx.stroke();
     }
     for (let row = 1; row < layout.rows; row++) {
       const gy = layout.margin_top_mm + row * (layout.sticker_height_mm + layout.spacing_v_mm) - layout.spacing_v_mm / 2;
       ctx.beginPath();
-      ctx.moveTo(layout.margin_left_mm * scale, gy * scale);
-      ctx.lineTo((layout.margin_left_mm + layout.cols * (layout.sticker_width_mm + layout.spacing_h_mm) - layout.spacing_h_mm) * scale, gy * scale);
+      ctx.moveTo(layout.margin_left_mm * pmm, gy * pmm);
+      ctx.lineTo((layout.margin_left_mm + layout.cols * (layout.sticker_width_mm + layout.spacing_h_mm) - layout.spacing_h_mm) * pmm, gy * pmm);
       ctx.stroke();
     }
     ctx.setLineDash([]);
