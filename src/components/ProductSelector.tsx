@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import type { Product } from '../types';
 import { supabase } from '../supabase';
 import { removeBackground } from '../utils/removeBackground';
-import { SavedLogos } from './SavedLogos';
+import { SavedLogos, saveLogoToLibrary } from './SavedLogos';
 
 interface Props {
   product: Product | null;
@@ -51,6 +51,7 @@ export function ProductSelector({ product, onProductChange, onLogoData }: Props)
       const cleaned = await removeBackground(dataUrl);
       onLogoData(cleaned);
       setLogoUrl(cleaned);
+      saveLogoToLibrary(cleaned, file.name.replace(/\.[^.]+$/, ''));
     };
     reader.readAsDataURL(file);
   }
