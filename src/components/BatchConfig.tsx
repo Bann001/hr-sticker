@@ -14,12 +14,13 @@ export function BatchConfig({ product, layout, onGenerate, disabled }: Props) {
   const yy = String(now.getFullYear()).slice(2);
   const mm = String(now.getMonth() + 1).padStart(2, '0');
   const [batchCode, setBatchCode] = useState(`${yy}${mm}`);
+  const [batchNum, setBatchNum] = useState('01');
   const [startSerial, setStartSerial] = useState(1);
   const [quantity, setQuantity] = useState(22);
   const [generating, setGenerating] = useState(false);
 
   function generateBT(serial: number): string {
-    return `${batchCode}${String(serial).padStart(5, '0')}`;
+    return `${batchCode}${batchNum}${String(serial).padStart(5, '0')}`;
   }
 
   function handlePreview() {
@@ -89,6 +90,15 @@ export function BatchConfig({ product, layout, onGenerate, disabled }: Props) {
         onChange={e => setBatchCode(e.target.value.replace(/\D/g, '').slice(0, 4))}
         placeholder="2612"
         maxLength={4}
+      />
+
+      <label style={styles.label}>Batch number (2 digits)</label>
+      <input
+        style={styles.input}
+        value={batchNum}
+        onChange={e => setBatchNum(e.target.value.replace(/\D/g, '').slice(0, 2))}
+        placeholder="01"
+        maxLength={2}
       />
 
       <label style={styles.label}>Start serial</label>

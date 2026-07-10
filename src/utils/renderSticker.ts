@@ -93,7 +93,7 @@ export function renderSticker(
   ctx.font = `bold ${FONT_BT * ppt}px ${fonts.bt}`;
   ctx.textAlign = 'right';
   ctx.fillText(
-    `BT: ${String(data.serial).padStart(5, '0')}`,
+    `BT: ${data.bt_number}`,
     (xMm + wMm - PAD) * pmm,
     (yMm + bottomY) * pmm,
   );
