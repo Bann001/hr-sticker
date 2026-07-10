@@ -8,7 +8,7 @@ function pt(mm: number): number {
 }
 
 const PAD = 3;
-const LOGO_SIZE = 10;
+const LOGO_SIZE = 12;
 
 function getImgSize(dataUrl: string): { w: number; h: number } {
   try {
@@ -56,10 +56,11 @@ function drawSticker(
   doc.rect(pt(xMm), pt(yMm), pt(wMm), pt(hMm), 'S');
 
   const topY = yMm + PAD + 2;
-  const logoCy = yMm + hMm * 0.44;
-  const brandY = yMm + hMm * 0.73;
+  const midY = yMm + hMm / 2;
   const bottomY = yMm + hMm - PAD - 0.5;
-  const logoCx = xMm + wMm / 2;
+  const logoCx = xMm + PAD + LOGO_SIZE / 2 + 1;
+  const brandCx = xMm + wMm / 2;
+  const brandY = midY + 1;
 
   doc.setFont('Helvetica', 'normal');
   doc.setFontSize(4.5);
@@ -67,13 +68,13 @@ function drawSticker(
   doc.text(product.distributor, pt(xMm + PAD), pt(topY));
 
   if (logoDataUrl) {
-    drawLogo(doc, logoCx, logoCy, LOGO_SIZE, logoDataUrl);
+    drawLogo(doc, logoCx, midY, LOGO_SIZE, logoDataUrl);
   }
 
   doc.setFont('Helvetica', 'bold');
   doc.setFontSize(5.5);
   doc.setTextColor(30, 30, 30);
-  doc.text(product.name, pt(logoCx), pt(brandY), { align: 'center' });
+  doc.text(product.name, pt(brandCx), pt(brandY), { align: 'center' });
 
   doc.setFont('Courier', 'bold');
   doc.setFontSize(4.8);
@@ -166,10 +167,11 @@ export function drawStickerPreview(
   ctx.strokeRect(xMm * s, yMm * s, wMm * s, hMm * s);
 
   const topY = yMm + PAD + 2;
-  const logoCy = yMm + hMm * 0.44;
-  const brandY = yMm + hMm * 0.73;
+  const midY = yMm + hMm / 2;
   const bottomY = yMm + hMm - PAD - 0.5;
-  const logoCx = xMm + wMm / 2;
+  const logoCx = xMm + PAD + LOGO_SIZE / 2 + 1;
+  const brandCx = xMm + wMm / 2;
+  const brandY = midY + 1;
 
   ctx.fillStyle = '#666';
   ctx.font = `${4.5 * s}px Helvetica`;
@@ -187,7 +189,7 @@ export function drawStickerPreview(
       const dw = iw * scale;
       const dh = ih * scale;
       const dx = logoCx - dw / 2;
-      const dy = logoCy - dh / 2;
+      const dy = midY - dh / 2;
       ctx.drawImage(img, dx * s, dy * s, dw * s, dh * s);
     } catch {}
   }
@@ -195,7 +197,7 @@ export function drawStickerPreview(
   ctx.fillStyle = '#1e1e1e';
   ctx.font = `bold ${5.5 * s}px Helvetica`;
   ctx.textAlign = 'center';
-  ctx.fillText(product.name, logoCx * s, brandY * s);
+  ctx.fillText(product.name, brandCx * s, brandY * s);
 
   ctx.fillStyle = '#1e1e1e';
   ctx.font = `bold ${4.8 * s}px Courier`;
