@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import type { Product, LayoutConfig, StickerData } from './types';
+import type { Product, LayoutConfig as LayoutConfigType, StickerData } from './types';
 import { DEFAULT_LAYOUT } from './types';
 import { ProductSelector } from './components/ProductSelector';
 import { BatchConfig } from './components/BatchConfig';
@@ -8,7 +8,7 @@ import { Preview } from './components/Preview';
 
 export default function App() {
   const [product, setProduct] = useState<Product | null>(null);
-  const [layout, setLayout] = useState<LayoutConfig>(DEFAULT_LAYOUT);
+  const [layout, setLayout] = useState<LayoutConfigType>(DEFAULT_LAYOUT);
   const [stickers, setStickers] = useState<StickerData[]>([]);
   const [logoDataUrl, setLogoDataUrl] = useState<string | undefined>();
   const [generated, setGenerated] = useState(false);
