@@ -35,6 +35,20 @@ export interface StickerData {
   serial: number;
 }
 
+export type FontFamily = 'Helvetica' | 'Times' | 'Courier';
+
+export interface FontConfig {
+  brand: FontFamily;
+  body: FontFamily;
+  bt: FontFamily;
+}
+
+export const DEFAULT_FONTS: FontConfig = {
+  brand: 'Helvetica',
+  body: 'Helvetica',
+  bt: 'Courier',
+};
+
 export const DEFAULT_LAYOUT: LayoutConfig = {
   cols: 2,
   rows: 11,

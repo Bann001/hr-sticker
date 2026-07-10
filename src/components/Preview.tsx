@@ -1,16 +1,17 @@
 import { useRef, useEffect, useState, useCallback } from 'react';
-import type { LayoutConfig, StickerData, Product } from '../types';
+import type { LayoutConfig, StickerData, Product, FontConfig } from '../types';
 import { generatePDF, loadImage, drawStickerPreview } from '../utils/pdf';
 
 interface Props {
   stickers: StickerData[];
   product: Product | null;
   layout: LayoutConfig;
+  fonts: FontConfig;
   logoDataUrl?: string;
   visible: boolean;
 }
 
-export function Preview({ stickers, product, layout, logoDataUrl, visible }: Props) {
+export function Preview({ stickers, product, layout, fonts, logoDataUrl, visible }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [page, setPage] = useState(0);
   const [zoom, setZoom] = useState(1);
@@ -48,7 +49,7 @@ export function Preview({ stickers, product, layout, logoDataUrl, visible }: Pro
       const x = layout.margin_left_mm + col * (layout.sticker_width_mm + layout.spacing_h_mm);
       const y = layout.margin_top_mm + row * (layout.sticker_height_mm + layout.spacing_v_mm);
 
-      drawStickerPreview(ctx, x, y, layout.sticker_width_mm, layout.sticker_height_mm, pageStickers[i], product, logoDataUrl);
+      drawStickerPreview(ctx, x, y, layout.sticker_width_mm, layout.sticker_height_mm, pageStickers[i], product, fonts, logoDataUrl);
     }
 
     // Cut guides
@@ -72,7 +73,7 @@ export function Preview({ stickers, product, layout, logoDataUrl, visible }: Pro
     ctx.setLineDash([]);
 
     ctx.setTransform(1, 0, 0, 1, 0, 0);
-  }, [stickers, product, layout, logoDataUrl, visible, page, zoom]);
+  }, [stickers, product, layout, fonts, logoDataUrl, visible, page, zoom]);
 
   const handleDownload = useCallback(async () => {
     if (!product) return;
@@ -86,6 +87,7 @@ export function Preview({ stickers, product, layout, logoDataUrl, visible }: Pro
         product,
         layout,
         stickers,
+        fonts,
         logoDataUrl: logo,
         filename: `stickers-${stickers[0]?.bt_number || 'batch'}.pdf`,
       });
@@ -99,7 +101,7 @@ export function Preview({ stickers, product, layout, logoDataUrl, visible }: Pro
       console.error('PDF generation failed:', err);
     }
     setDownloading(false);
-  }, [product, layout, stickers, logoDataUrl]);
+  }, [product, layout, stickers, fonts, logoDataUrl]);
 
   if (!visible || !product) {
     return (

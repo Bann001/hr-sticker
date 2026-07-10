@@ -1,5 +1,5 @@
 import { jsPDF } from 'jspdf';
-import type { LayoutConfig, StickerData, Product } from '../types';
+import type { LayoutConfig, StickerData, Product, FontConfig } from '../types';
 
 const MM_PER_IN = 25.4;
 
@@ -46,6 +46,7 @@ function drawSticker(
   wMm: number, hMm: number,
   data: StickerData,
   product: Product,
+  fonts: FontConfig,
   logoDataUrl?: string,
 ) {
   doc.setFillColor(255, 255, 255);
@@ -62,7 +63,7 @@ function drawSticker(
   const brandX = xMm + wMm / 2 + 2;
   const brandY = midY + 1;
 
-  doc.setFont('Helvetica', 'normal');
+  doc.setFont(fonts.body, 'normal');
   doc.setFontSize(4.5);
   doc.setTextColor(100, 100, 100);
   doc.text(`Distributed by: ${product.distributor}`, pt(xMm + wMm / 2), pt(topY), { align: 'center' });
@@ -71,17 +72,17 @@ function drawSticker(
     drawLogo(doc, logoCx, midY, LOGO_SIZE, logoDataUrl);
   }
 
-  doc.setFont('Helvetica', 'bold');
+  doc.setFont(fonts.brand, 'bold');
   doc.setFontSize(5.5);
   doc.setTextColor(30, 30, 30);
   doc.text(product.name, pt(brandX), pt(brandY));
 
-  doc.setFont('Helvetica', 'normal');
+  doc.setFont(fonts.body, 'normal');
   doc.setFontSize(4.5);
   doc.setTextColor(120, 120, 120);
   doc.text(product.volume, pt(xMm + PAD), pt(bottomY));
 
-  doc.setFont('Courier', 'bold');
+  doc.setFont(fonts.bt, 'bold');
   doc.setFontSize(4.8);
   doc.setTextColor(30, 30, 30);
   doc.text(`BT: ${String(data.serial).padStart(5, '0')}`, pt(xMm + wMm - PAD), pt(bottomY), { align: 'right' });
@@ -108,12 +109,13 @@ export interface GenerateOptions {
   product: Product;
   layout: LayoutConfig;
   stickers: StickerData[];
+  fonts: FontConfig;
   logoDataUrl?: string;
   filename?: string;
 }
 
 export function generatePDF(opts: GenerateOptions): Blob {
-  const { product, layout, stickers, logoDataUrl } = opts;
+  const { product, layout, stickers, fonts, logoDataUrl } = opts;
 
   const perPage = layout.cols * layout.rows;
   const totalPages = Math.ceil(stickers.length / perPage);
@@ -142,6 +144,7 @@ export function generatePDF(opts: GenerateOptions): Blob {
         layout.sticker_width_mm, layout.sticker_height_mm,
         stickers[stickerIndex],
         product,
+        fonts,
         logoDataUrl,
       );
     }
@@ -155,6 +158,7 @@ export function drawStickerPreview(
   xMm: number, yMm: number, wMm: number, hMm: number,
   data: StickerData,
   product: Product,
+  fonts: FontConfig,
   logoDataUrl?: string,
 ) {
   const s = 72 / MM_PER_IN;
@@ -174,7 +178,7 @@ export function drawStickerPreview(
   const brandY = midY + 1;
 
   ctx.fillStyle = '#666';
-  ctx.font = `${4.5 * s}px Helvetica`;
+  ctx.font = `${4.5 * s}px ${fonts.body}`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'alphabetic';
   ctx.fillText(`Distributed by: ${product.distributor}`, (xMm + wMm / 2) * s, topY * s);
@@ -195,17 +199,17 @@ export function drawStickerPreview(
   }
 
   ctx.fillStyle = '#1e1e1e';
-  ctx.font = `bold ${5.5 * s}px Helvetica`;
+  ctx.font = `bold ${5.5 * s}px ${fonts.brand}`;
   ctx.textAlign = 'left';
   ctx.fillText(product.name, brandX * s, brandY * s);
 
   ctx.fillStyle = '#888';
-  ctx.font = `${4.5 * s}px Helvetica`;
+  ctx.font = `${4.5 * s}px ${fonts.body}`;
   ctx.textAlign = 'left';
   ctx.fillText(product.volume, (xMm + PAD) * s, bottomY * s);
 
   ctx.fillStyle = '#1e1e1e';
-  ctx.font = `bold ${4.8 * s}px Courier`;
+  ctx.font = `bold ${4.8 * s}px ${fonts.bt}`;
   ctx.textAlign = 'right';
   ctx.fillText(`BT: ${String(data.serial).padStart(5, '0')}`, (xMm + wMm - PAD) * s, bottomY * s);
 }

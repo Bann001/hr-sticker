@@ -1,14 +1,16 @@
 import { useState, useCallback } from 'react';
-import type { Product, LayoutConfig as LayoutConfigType, StickerData } from './types';
-import { DEFAULT_LAYOUT } from './types';
+import type { Product, LayoutConfig as LayoutConfigType, StickerData, FontConfig as FontConfigType } from './types';
+import { DEFAULT_LAYOUT, DEFAULT_FONTS } from './types';
 import { ProductSelector } from './components/ProductSelector';
 import { BatchConfig } from './components/BatchConfig';
 import { LayoutConfig } from './components/LayoutConfig';
+import { FontConfig } from './components/FontConfig';
 import { Preview } from './components/Preview';
 
 export default function App() {
   const [product, setProduct] = useState<Product | null>(null);
   const [layout, setLayout] = useState<LayoutConfigType>(DEFAULT_LAYOUT);
+  const [fonts, setFonts] = useState<FontConfigType>(DEFAULT_FONTS);
   const [stickers, setStickers] = useState<StickerData[]>([]);
   const [logoDataUrl, setLogoDataUrl] = useState<string | undefined>();
   const [generated, setGenerated] = useState(false);
@@ -45,6 +47,8 @@ export default function App() {
             disabled={!product}
           />
 
+          <FontConfig config={fonts} onChange={setFonts} />
+
           <LayoutConfig layout={layout} onChange={setLayout} />
         </aside>
 
@@ -53,6 +57,7 @@ export default function App() {
             stickers={stickers}
             product={product}
             layout={layout}
+            fonts={fonts}
             logoDataUrl={logoDataUrl}
             visible={generated}
           />
