@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import type { Product } from '../types';
 import { supabase } from '../supabase';
 import { removeBackground } from '../utils/removeBackground';
+import { SavedLogos } from './SavedLogos';
 
 interface Props {
   product: Product | null;
@@ -115,7 +116,10 @@ export function ProductSelector({ product, onProductChange, onLogoData }: Props)
           <label style={styles.label}>Logo URL</label>
           <input style={styles.input} value={logoUrl} onChange={e => loadLogo(e.target.value)} placeholder="https://..." />
 
-          <label style={styles.label}>Or upload</label>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <label style={styles.label}>Or upload</label>
+            <SavedLogos onSelect={url => { onLogoData(url); setLogoUrl(url); }} />
+          </div>
           <input ref={fileRef} type="file" accept="image/*" onChange={handleFile} style={{ color: '#aaa', fontSize: 12 }} />
 
           <button style={styles.saveBtn} onClick={handleSave} disabled={loading}>
