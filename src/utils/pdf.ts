@@ -65,7 +65,7 @@ function drawSticker(
   doc.setFont('Helvetica', 'normal');
   doc.setFontSize(4.5);
   doc.setTextColor(100, 100, 100);
-  doc.text(`Distributed by: ${product.distributor}`, pt(xMm + PAD), pt(topY));
+  doc.text(`Distributed by: ${product.distributor}`, pt(xMm + wMm / 2), pt(topY), { align: 'center' });
 
   if (logoDataUrl) {
     drawLogo(doc, logoCx, midY, LOGO_SIZE, logoDataUrl);
@@ -175,9 +175,9 @@ export function drawStickerPreview(
 
   ctx.fillStyle = '#666';
   ctx.font = `${4.5 * s}px Helvetica`;
-  ctx.textAlign = 'left';
+  ctx.textAlign = 'center';
   ctx.textBaseline = 'alphabetic';
-  ctx.fillText(`Distributed by: ${product.distributor}`, (xMm + PAD) * s, topY * s);
+  ctx.fillText(`Distributed by: ${product.distributor}`, (xMm + wMm / 2) * s, topY * s);
 
   if (logoDataUrl) {
     try {
