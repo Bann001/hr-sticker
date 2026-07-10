@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { Product, LayoutConfig, StickerData } from '../types';
 import { supabase } from '../supabase';
+import { removeBackground } from '../utils/removeBackground';
 
 interface Props {
   product: Product | null;
@@ -61,12 +62,12 @@ export function BatchConfig({ product, layout, onGenerate, disabled }: Props) {
         const img = new Image();
         img.crossOrigin = 'anonymous';
         await new Promise<void>((resolve, reject) => {
-          img.onload = () => {
+          img.onload = async () => {
             const c = document.createElement('canvas');
             c.width = img.naturalWidth;
             c.height = img.naturalHeight;
             c.getContext('2d')!.drawImage(img, 0, 0);
-            logo = c.toDataURL('image/png');
+            logo = await removeBackground(c.toDataURL('image/png'));
             resolve();
           };
           img.onerror = reject;

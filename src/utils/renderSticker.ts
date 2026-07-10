@@ -3,7 +3,7 @@ import type { StickerData, Product, FontConfig } from '../types';
 const PAD = 3;
 const LOGO_SIZE = 18;
 const FONT_TOP = 4.5;
-const FONT_BRAND = 5.5;
+const FONT_BRAND = 8;
 const FONT_VOLUME = 4.5;
 const FONT_BT = 4.8;
 

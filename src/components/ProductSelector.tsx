@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import type { Product } from '../types';
 import { supabase } from '../supabase';
+import { removeBackground } from '../utils/removeBackground';
 
 interface Props {
   product: Product | null;
@@ -24,30 +25,31 @@ export function ProductSelector({ product, onProductChange, onLogoData }: Props)
     });
   }, []);
 
-  function loadLogo(url: string) {
+  async function loadLogo(url: string) {
     setLogoUrl(url);
     if (!url) { onLogoData(undefined); return; }
     const img = new Image();
     img.crossOrigin = 'anonymous';
-    img.onload = () => {
+    img.onload = async () => {
       const c = document.createElement('canvas');
       c.width = img.naturalWidth;
       c.height = img.naturalHeight;
       c.getContext('2d')!.drawImage(img, 0, 0);
-      onLogoData(c.toDataURL('image/png'));
+      const cleaned = await removeBackground(c.toDataURL('image/png'));
+      onLogoData(cleaned);
     };
     img.src = url;
   }
 
-  function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
+  async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = () => {
+    reader.onload = async () => {
       const dataUrl = reader.result as string;
-      onLogoData(dataUrl);
-      // Store as local blob URL for Supabase
-      setLogoUrl(dataUrl);
+      const cleaned = await removeBackground(dataUrl);
+      onLogoData(cleaned);
+      setLogoUrl(cleaned);
     };
     reader.readAsDataURL(file);
   }
