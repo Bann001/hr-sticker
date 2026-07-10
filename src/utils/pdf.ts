@@ -58,14 +58,14 @@ function drawSticker(
   const topY = yMm + PAD + 2;
   const midY = yMm + hMm / 2;
   const bottomY = yMm + hMm - PAD - 0.5;
-  const logoCx = xMm + PAD + LOGO_SIZE / 2 + 1;
-  const brandCx = xMm + wMm / 2;
+  const logoCx = xMm + wMm / 2 - 10;
+  const brandX = xMm + wMm / 2 + 2;
   const brandY = midY + 1;
 
   doc.setFont('Helvetica', 'normal');
   doc.setFontSize(4.5);
   doc.setTextColor(100, 100, 100);
-  doc.text(product.distributor, pt(xMm + PAD), pt(topY));
+  doc.text(`Distributed by: ${product.distributor}`, pt(xMm + PAD), pt(topY));
 
   if (logoDataUrl) {
     drawLogo(doc, logoCx, midY, LOGO_SIZE, logoDataUrl);
@@ -74,17 +74,17 @@ function drawSticker(
   doc.setFont('Helvetica', 'bold');
   doc.setFontSize(5.5);
   doc.setTextColor(30, 30, 30);
-  doc.text(product.name, pt(brandCx), pt(brandY), { align: 'center' });
-
-  doc.setFont('Courier', 'bold');
-  doc.setFontSize(4.8);
-  doc.setTextColor(30, 30, 30);
-  doc.text(data.bt_number, pt(xMm + PAD), pt(bottomY));
+  doc.text(product.name, pt(brandX), pt(brandY));
 
   doc.setFont('Helvetica', 'normal');
   doc.setFontSize(4.5);
   doc.setTextColor(120, 120, 120);
-  doc.text(product.volume, pt(xMm + wMm - PAD), pt(bottomY), { align: 'right' });
+  doc.text(product.volume, pt(xMm + PAD), pt(bottomY));
+
+  doc.setFont('Courier', 'bold');
+  doc.setFontSize(4.8);
+  doc.setTextColor(30, 30, 30);
+  doc.text(`BT: ${String(data.serial).padStart(5, '0')}`, pt(xMm + wMm - PAD), pt(bottomY), { align: 'right' });
 }
 
 export function loadImage(url: string): Promise<string> {
@@ -169,15 +169,15 @@ export function drawStickerPreview(
   const topY = yMm + PAD + 2;
   const midY = yMm + hMm / 2;
   const bottomY = yMm + hMm - PAD - 0.5;
-  const logoCx = xMm + PAD + LOGO_SIZE / 2 + 1;
-  const brandCx = xMm + wMm / 2;
+  const logoCx = xMm + wMm / 2 - 10;
+  const brandX = xMm + wMm / 2 + 2;
   const brandY = midY + 1;
 
   ctx.fillStyle = '#666';
   ctx.font = `${4.5 * s}px Helvetica`;
   ctx.textAlign = 'left';
   ctx.textBaseline = 'alphabetic';
-  ctx.fillText(product.distributor, (xMm + PAD) * s, topY * s);
+  ctx.fillText(`Distributed by: ${product.distributor}`, (xMm + PAD) * s, topY * s);
 
   if (logoDataUrl) {
     try {
@@ -196,16 +196,16 @@ export function drawStickerPreview(
 
   ctx.fillStyle = '#1e1e1e';
   ctx.font = `bold ${5.5 * s}px Helvetica`;
-  ctx.textAlign = 'center';
-  ctx.fillText(product.name, brandCx * s, brandY * s);
-
-  ctx.fillStyle = '#1e1e1e';
-  ctx.font = `bold ${4.8 * s}px Courier`;
   ctx.textAlign = 'left';
-  ctx.fillText(data.bt_number, (xMm + PAD) * s, bottomY * s);
+  ctx.fillText(product.name, brandX * s, brandY * s);
 
   ctx.fillStyle = '#888';
   ctx.font = `${4.5 * s}px Helvetica`;
+  ctx.textAlign = 'left';
+  ctx.fillText(product.volume, (xMm + PAD) * s, bottomY * s);
+
+  ctx.fillStyle = '#1e1e1e';
+  ctx.font = `bold ${4.8 * s}px Courier`;
   ctx.textAlign = 'right';
-  ctx.fillText(product.volume, (xMm + wMm - PAD) * s, bottomY * s);
+  ctx.fillText(`BT: ${String(data.serial).padStart(5, '0')}`, (xMm + wMm - PAD) * s, bottomY * s);
 }
