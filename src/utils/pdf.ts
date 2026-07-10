@@ -13,7 +13,7 @@ const LOGO_W = 18;
 const LOGO_H = 18;
 const LOGO_TEXT_GAP = 2.5;
 const HEADER_BARCODE_GAP = 5.5;
-const BC_HEIGHT = 5;
+const BC_HEIGHT = 4.5;
 const BC_WIDTH_RATIO = 0.5;
 
 // ─── CODE128B encoder ───────────────────────────────────────
@@ -162,7 +162,7 @@ function drawSticker(
   doc.setFont('Courier', 'bold');
   doc.setFontSize(4.8);
   doc.setTextColor(30, 30, 30);
-  doc.text(data.bt_number, pt(xMm + wMm / 2), pt(bcTop + BC_HEIGHT + 0.8), { align: 'center' });
+  doc.text(data.bt_number, pt(xMm + wMm / 2), pt(bcTop + BC_HEIGHT + 2.5), { align: 'center' });
 }
 
 // ─── Load image and return data URL ─────────────────────────
@@ -307,5 +307,5 @@ export function drawStickerPreview(
   ctx.font = `bold ${4.8 * s}px Courier`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'top';
-  ctx.fillText(data.bt_number, (xMm + wMm / 2) * s, (bcTop + bcH + 0.8) * s);
+  ctx.fillText(data.bt_number, (xMm + wMm / 2) * s, (bcTop + bcH + 2.5) * s);
 }
