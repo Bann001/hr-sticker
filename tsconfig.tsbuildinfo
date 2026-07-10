@@ -1,0 +1,1 @@
+{"root":["./src/app.tsx","./src/main.tsx","./src/supabase.ts","./src/types.ts","./src/components/batchconfig.tsx","./src/components/layoutconfig.tsx","./src/components/preview.tsx","./src/components/productselector.tsx","./src/utils/pdf.ts"],"version":"5.9.3"}

@@ -1,6 +1,6 @@
 import { useRef, useEffect, useState, useCallback } from 'react';
 import type { LayoutConfig, StickerData, Product } from '../types';
-import { generatePDF, loadImage } from '../utils/pdf';
+import { generatePDF, loadImage, drawStickerPreview } from '../utils/pdf';
 
 interface Props {
   stickers: StickerData[];
@@ -73,67 +73,6 @@ export function Preview({ stickers, product, layout, logoDataUrl, visible }: Pro
 
     ctx.setTransform(1, 0, 0, 1, 0, 0);
   }, [stickers, product, layout, logoDataUrl, visible, page, zoom]);
-
-  function drawStickerPreview(
-    ctx: CanvasRenderingContext2D,
-    xMm: number, yMm: number, wMm: number, hMm: number,
-    data: StickerData,
-    prod: Product,
-    logo?: string,
-  ) {
-    const s = 72 / 25.4;
-
-    ctx.fillStyle = '#fff';
-    ctx.fillRect(xMm * s, yMm * s, wMm * s, hMm * s);
-
-    ctx.strokeStyle = '#d0d0d0';
-    ctx.lineWidth = 0.3;
-    ctx.strokeRect(xMm * s, yMm * s, wMm * s, hMm * s);
-
-    // Logo
-    if (logo) {
-      try {
-        const img = new Image();
-        img.src = logo;
-        ctx.drawImage(img, (xMm + 1.5) * s, (yMm + 1.5) * s, 6 * s, 6 * s);
-      } catch {}
-    }
-
-    const lx = (xMm + (logo ? 8.5 : 1.5)) * s;
-
-    ctx.fillStyle = '#1e1e1e';
-    ctx.font = `bold ${6 * s}px Helvetica`;
-    ctx.textAlign = 'left';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(prod.distributor, lx, (yMm + 2.5) * s);
-
-    ctx.fillStyle = '#555';
-    ctx.font = `bold ${5 * s}px Helvetica`;
-    ctx.fillText(prod.name, lx, (yMm + 5) * s);
-
-    ctx.fillStyle = '#888';
-    ctx.font = `${4.5 * s}px Helvetica`;
-    ctx.fillText(prod.volume, lx, (yMm + 7.5) * s);
-
-    // Barcode bars (simplified for preview)
-    const bcW = wMm * 0.45 * s;
-    const bcH = 7 * s;
-    const bcX = (xMm + (wMm - wMm * 0.45) / 2) * s;
-    const bcY = (yMm + 8.5) * s;
-
-    ctx.fillStyle = '#000';
-    const simplify = data.bt_number.split('').map(c => c.charCodeAt(0) % 2);
-    const barW = bcW / simplify.length;
-    simplify.forEach((b, i) => {
-      if (b === 0) ctx.fillRect(bcX + i * barW, bcY, Math.max(barW * 0.6, 0.5), bcH);
-    });
-
-    ctx.fillStyle = '#1e1e1e';
-    ctx.font = `bold ${4.8 * s}px Courier`;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'top';
-    ctx.fillText(data.bt_number, (xMm + wMm / 2) * s, bcY + bcH + 0.6 * s);
-  }
 
   const handleDownload = useCallback(async () => {
     if (!product) return;

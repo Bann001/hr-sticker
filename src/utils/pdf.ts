@@ -7,7 +7,16 @@ function pt(mm: number): number {
   return mm * 72 / MM_PER_IN;
 }
 
-// ─── CODE128B encoder (returns bar-pattern string) ─────────
+// ─── Layout constants ───────────────────────────────────────
+const PAD = 3;
+const LOGO_W = 18;
+const LOGO_H = 18;
+const LOGO_TEXT_GAP = 2.5;
+const HEADER_BARCODE_GAP = 5.5;
+const BC_HEIGHT = 5;
+const BC_WIDTH_RATIO = 0.5;
+
+// ─── CODE128B encoder ───────────────────────────────────────
 const B_PATTERNS = [
   '11011001100','11001101100','11001100110','10010011000','10010001100','10001001100','10011001000','10011000100','10001100100','11001001000',
   '11001000100','11000100100','10110011100','10011011100','10011001110','10111001100','10011101100','10011100110','11001110010','11001011100',
@@ -33,16 +42,15 @@ function code128B(text: string): string {
   return codes.map(c => B_PATTERNS[c]).join('');
 }
 
-// ─── Draw barcode ───────────────────────────────────────────
+// ─── Barcode bars ───────────────────────────────────────────
 function drawBarcode(
   doc: jsPDF,
-  xMm: number,
-  yMm: number,
-  wMm: number,
-  hMm: number,
+  xMm: number, yMm: number,
+  wMm: number, hMm: number,
   text: string,
 ) {
   const pat = code128B(text);
+  if (!pat.length) return;
   const mw = pt(wMm) / pat.length;
   for (let i = 0; i < pat.length; i++) {
     if (pat[i] === '1') {
@@ -51,13 +59,69 @@ function drawBarcode(
   }
 }
 
-// ─── Draw one sticker ───────────────────────────────────────
+// ─── Get image dimensions synchronously from a data URL ────
+function getImgSize(dataUrl: string): { w: number; h: number } {
+  try {
+    const c = document.createElement('canvas');
+    const img = new Image();
+    img.src = dataUrl;
+    c.width = img.naturalWidth || 1;
+    c.height = img.naturalHeight || 1;
+    return { w: c.width, h: c.height };
+  } catch {
+    return { w: 1, h: 1 };
+  }
+}
+
+// ─── Logo with object-fit: contain ─────────────────────────
+function drawLogo(
+  doc: jsPDF,
+  xMm: number, yMm: number,
+  cw: number, ch: number,
+  dataUrl: string,
+) {
+  try {
+    const { w, h } = getImgSize(dataUrl);
+    const scale = Math.min(cw / w, ch / h);
+    const dw = w * scale;
+    const dh = h * scale;
+    const dx = xMm + (cw - dw) / 2;
+    const dy = yMm + (ch - dh) / 2;
+    doc.addImage(dataUrl, 'PNG', pt(dx), pt(dy), pt(dw), pt(dh));
+  } catch {
+    /* skip */
+  }
+}
+
+// ─── Header text (distributor / name / volume) ─────────────
+function drawHeaderText(
+  doc: jsPDF,
+  xMm: number, yMm: number,
+  maxW: number,
+  product: Product,
+) {
+  const lineH = 2.8;
+
+  doc.setFont('Helvetica', 'bold');
+  doc.setFontSize(6);
+  doc.setTextColor(30, 30, 30);
+  doc.text(product.distributor, pt(xMm), pt(yMm));
+
+  doc.setFontSize(5);
+  doc.setTextColor(80, 80, 80);
+  doc.text(product.name, pt(xMm), pt(yMm + lineH));
+
+  doc.setFont('Helvetica', 'normal');
+  doc.setFontSize(4.5);
+  doc.setTextColor(120, 120, 120);
+  doc.text(product.volume, pt(xMm), pt(yMm + lineH * 2));
+}
+
+// ─── Draw one sticker (flexbox-like layout) ────────────────
 function drawSticker(
   doc: jsPDF,
-  xMm: number,
-  yMm: number,
-  wMm: number,
-  hMm: number,
+  xMm: number, yMm: number,
+  wMm: number, hMm: number,
   data: StickerData,
   product: Product,
   logoDataUrl?: string,
@@ -71,46 +135,34 @@ function drawSticker(
   doc.setLineWidth(0.2);
   doc.rect(pt(xMm), pt(yMm), pt(wMm), pt(hMm), 'S');
 
-  // ── Logo (top-left) ──
+  // ── Layout within padding ──
+  const logoX = xMm + PAD;
+  const logoY = yMm + PAD;
+  const textX = logoX + LOGO_W + LOGO_TEXT_GAP;
+  const textY = logoY + 1.2;
+  const textMaxW = wMm - PAD - textX + xMm - PAD;
+  const textBottom = textY + 2.8 * 2 + 1;
+  const bcTop = textBottom + HEADER_BARCODE_GAP;
+  const bcW = wMm * BC_WIDTH_RATIO;
+  const bcX = xMm + (wMm - bcW) / 2;
+
+  // ── Logo ──
   if (logoDataUrl) {
-    try {
-      doc.addImage(logoDataUrl, 'PNG', pt(xMm + 1.5), pt(yMm + 1.5), pt(6), pt(6));
-    } catch { /* skip if image fails */ }
+    drawLogo(doc, logoX, logoY, LOGO_W, LOGO_H, logoDataUrl);
   }
 
-  // ── Distributor name ──
-  doc.setFont('Helvetica', 'bold');
-  doc.setFontSize(6);
-  doc.setTextColor(30, 30, 30);
-  const labelX = pt(xMm + (logoDataUrl ? 8.5 : 1.5));
-  doc.text(product.distributor, labelX, pt(yMm + 2.5));
+  // ── Text ──
+  drawHeaderText(doc, textX, textY, textMaxW, product);
 
-  // ── Product name ──
-  doc.setFont('Helvetica', 'bold');
-  doc.setFontSize(5);
-  doc.setTextColor(80, 80, 80);
-  doc.text(product.name, labelX, pt(yMm + 5));
-
-  // ── Volume ──
-  doc.setFont('Helvetica', 'normal');
-  doc.setFontSize(4.5);
-  doc.setTextColor(120, 120, 120);
-  doc.text(product.volume, labelX, pt(yMm + 7.5));
-
-  // ── BT Number (barcode area) ──
-  const bcW = wMm * 0.45;
-  const bcH = 7;
-  const bcX = xMm + (wMm - bcW) / 2;
-  const bcY = yMm + 8.5;
-
+  // ── Barcode ──
   doc.setFillColor(0, 0, 0);
-  drawBarcode(doc, bcX, bcY, bcW, bcH, data.bt_number);
+  drawBarcode(doc, bcX, bcTop, bcW, BC_HEIGHT, data.bt_number);
 
-  // ── BT number text below barcode ──
+  // ── Batch number ──
   doc.setFont('Courier', 'bold');
   doc.setFontSize(4.8);
   doc.setTextColor(30, 30, 30);
-  doc.text(data.bt_number, pt(xMm + wMm / 2), pt(bcY + bcH + 0.6), { align: 'center' });
+  doc.text(data.bt_number, pt(xMm + wMm / 2), pt(bcTop + BC_HEIGHT + 0.8), { align: 'center' });
 }
 
 // ─── Load image and return data URL ─────────────────────────
@@ -186,58 +238,74 @@ export function drawStickerPreview(
   product: Product,
   logoDataUrl?: string,
 ) {
-  const scale = 72 / MM_PER_IN;
-  const sx = (mm: number) => mm * scale;
-  const fontSize = (pt: number) => pt;
+  const s = 72 / MM_PER_IN;
 
-  ctx.save();
+  // Background
   ctx.fillStyle = '#fff';
-  ctx.fillRect(sx(xMm), sx(yMm), sx(wMm), sx(hMm));
+  ctx.fillRect(xMm * s, yMm * s, wMm * s, hMm * s);
 
+  // Border
   ctx.strokeStyle = '#d0d0d0';
   ctx.lineWidth = 0.3;
-  ctx.strokeRect(sx(xMm), sx(yMm), sx(wMm), sx(hMm));
+  ctx.strokeRect(xMm * s, yMm * s, wMm * s, hMm * s);
 
-  // Logo
+  // ── Layout ──
+  const logoX = xMm + PAD;
+  const logoY = yMm + PAD;
+  const textX = logoX + LOGO_W + LOGO_TEXT_GAP;
+  const textY = logoY + 1.2;
+  const textMaxW = wMm - PAD - (textX - xMm) - PAD;
+  const textBottom = textY + 2.8 * 2 + 1;
+  const bcTop = textBottom + HEADER_BARCODE_GAP;
+  const bcW = wMm * BC_WIDTH_RATIO;
+  const bcX = xMm + (wMm - bcW) / 2;
+  const bcH = BC_HEIGHT;
+
+  // ── Logo ──
   if (logoDataUrl) {
-    const img = new Image();
-    img.src = logoDataUrl;
-    try { ctx.drawImage(img, sx(xMm + 1.5), sx(yMm + 1.5), sx(6), sx(6)); } catch {}
+    try {
+      const img = new Image();
+      img.src = logoDataUrl;
+      const iw = img.naturalWidth || 1;
+      const ih = img.naturalHeight || 1;
+      const scale = Math.min(LOGO_W / iw, LOGO_H / ih);
+      const dw = iw * scale;
+      const dh = ih * scale;
+      const dx = logoX + (LOGO_W - dw) / 2;
+      const dy = logoY + (LOGO_H - dh) / 2;
+      ctx.drawImage(img, dx * s, dy * s, dw * s, dh * s);
+    } catch {}
   }
 
-  const labelX = sx(xMm + (logoDataUrl ? 8.5 : 1.5));
+  // ── Text ──
+  const lh = 2.8 * s;
 
   ctx.fillStyle = '#1e1e1e';
-  ctx.font = `bold ${fontSize(6)}px Helvetica`;
+  ctx.font = `bold ${6 * s}px Helvetica`;
   ctx.textAlign = 'left';
-  ctx.fillText(product.distributor, labelX, sx(yMm + 2.5));
+  ctx.textBaseline = 'top';
+  ctx.fillText(product.distributor, textX * s, textY * s);
 
   ctx.fillStyle = '#555';
-  ctx.font = `bold ${fontSize(5)}px Helvetica`;
-  ctx.fillText(product.name, labelX, sx(yMm + 5));
+  ctx.font = `bold ${5 * s}px Helvetica`;
+  ctx.fillText(product.name, textX * s, (textY + 2.8) * s);
 
   ctx.fillStyle = '#888';
-  ctx.font = `${fontSize(4.5)}px Helvetica`;
-  ctx.fillText(product.volume, labelX, sx(yMm + 7.5));
+  ctx.font = `${4.5 * s}px Helvetica`;
+  ctx.fillText(product.volume, textX * s, (textY + 5.6) * s);
 
-  // Barcode area placeholder (we skip actual barcode in preview for performance)
-  const bcW = sx(wMm * 0.45);
-  const bcH = sx(7);
-  const bcX = sx(xMm + (wMm - wMm * 0.45) / 2);
-  const bcY = sx(yMm + 8.5);
-
+  // ── Barcode bars (simplified for preview) ──
   ctx.fillStyle = '#000';
-  // Draw simplified barcode bars
   const simplify = data.bt_number.split('').map(c => c.charCodeAt(0) % 2);
-  const barW = bcW / simplify.length;
+  const barW = (bcW * s) / simplify.length;
   simplify.forEach((b, i) => {
-    if (b === 0) ctx.fillRect(bcX + i * barW, bcY, Math.max(barW * 0.6, 0.5), bcH);
+    if (b === 0) ctx.fillRect(bcX * s + i * barW, bcTop * s, Math.max(barW * 0.6, 0.5), bcH * s);
   });
 
+  // ── Batch number ──
   ctx.fillStyle = '#1e1e1e';
-  ctx.font = `bold ${fontSize(4.8)}px Courier`;
+  ctx.font = `bold ${4.8 * s}px Courier`;
   ctx.textAlign = 'center';
-  ctx.fillText(data.bt_number, sx(xMm + wMm / 2), bcY + sx(bcH / scale + 0.6));
-
-  ctx.restore();
+  ctx.textBaseline = 'top';
+  ctx.fillText(data.bt_number, (xMm + wMm / 2) * s, (bcTop + bcH + 0.8) * s);
 }
