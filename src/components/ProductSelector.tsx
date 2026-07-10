@@ -76,7 +76,7 @@ export function ProductSelector({ product, onProductChange, onLogoData }: Props)
     <div>
       <h3 style={styles.title}>Product</h3>
 
-      {products.length > 0 && (
+      {!editing && products.length > 0 && (
         <select
           style={styles.select}
           value={product?.id || ''}

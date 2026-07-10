@@ -35,7 +35,7 @@ export interface StickerData {
   serial: number;
 }
 
-export type FontFamily = 'Helvetica' | 'Times' | 'Courier';
+export type FontFamily = 'Helvetica' | 'Arial' | 'Times' | 'Georgia' | 'Verdana' | 'Trebuchet MS' | 'Courier';
 
 export interface FontConfig {
   brand: FontFamily;
