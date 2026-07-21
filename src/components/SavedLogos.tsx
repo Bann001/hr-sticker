@@ -20,12 +20,24 @@ function loadAll(): SavedLogo[] {
   }
 }
 
+const MAX_LOGOS = 20;
+
 export function saveLogoToLibrary(dataUrl: string, name: string) {
-  const all = loadAll();
-  // avoid duplicates
+  let all = loadAll();
   if (all.some(l => l.dataUrl === dataUrl)) return;
-  all.push({ id: Date.now().toString(), name, dataUrl });
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(all));
+  const entry = { id: Date.now().toString(), name, dataUrl };
+  all.push(entry);
+  while (all.length > MAX_LOGOS) all.shift();
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(all));
+  } catch {
+    // quota exceeded — drop oldest until it fits
+    while (all.length > 0) {
+      all.shift();
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(all)); break; }
+      catch { continue; }
+    }
+  }
 }
 
 export function SavedLogos({ onSelect }: Props) {
