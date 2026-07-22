@@ -1,7 +1,8 @@
 import { useRef, useEffect, useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import type { LayoutConfig, StickerData, Product, FontConfig } from '../types';
-import { generatePDF, loadImage, renderSticker } from '../utils/pdf';
+import type { LayoutConfig, StickerData, Product, FontConfig, DesignElement } from '../types';
+import { renderSticker } from '../utils/renderSticker';
+import type { GenerateOptions, DesignGenerateOptions } from '../utils/pdf';
 
 interface Props {
   stickers: StickerData[];
@@ -10,11 +11,26 @@ interface Props {
   fonts: FontConfig;
   logoDataUrl?: string;
   visible: boolean;
+  designElements?: DesignElement[];
+  generatePDFOverride?: (opts: DesignGenerateOptions) => Blob;
+  renderStickerOverride?: (
+    ctx: CanvasRenderingContext2D,
+    xMm: number, yMm: number,
+    wMm: number, hMm: number,
+    dpi: number,
+    elements: DesignElement[],
+    product: Product,
+    btNumber: string,
+    logoDataUrl?: string,
+  ) => void;
 }
 
 const PREVIEW_DPI = 72;
 
-export function Preview({ stickers, product, layout, fonts, logoDataUrl, visible }: Props) {
+export function Preview({
+  stickers, product, layout, fonts, logoDataUrl, visible,
+  designElements, generatePDFOverride, renderStickerOverride,
+}: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [page, setPage] = useState(0);
   const [zoom, setZoom] = useState(1);
@@ -24,6 +40,8 @@ export function Preview({ stickers, product, layout, fonts, logoDataUrl, visible
   const totalPages = Math.ceil(stickers.length / perPage);
 
   const pageStickers = stickers.slice(page * perPage, (page + 1) * perPage);
+
+  const isDesignMode = designElements !== undefined && designElements.length > 0;
 
   useEffect(() => {
     if (!visible || !canvasRef.current || !product) return;
@@ -49,7 +67,19 @@ export function Preview({ stickers, product, layout, fonts, logoDataUrl, visible
       const x = layout.margin_left_mm + col * (layout.sticker_width_mm + layout.spacing_h_mm);
       const y = layout.margin_top_mm + row * (layout.sticker_height_mm + layout.spacing_v_mm);
 
-      renderSticker(ctx, x, y, layout.sticker_width_mm, layout.sticker_height_mm, PREVIEW_DPI, pageStickers[i], product, fonts, logoDataUrl);
+      if (isDesignMode && renderStickerOverride) {
+        renderStickerOverride(
+          ctx, x, y,
+          layout.sticker_width_mm, layout.sticker_height_mm,
+          PREVIEW_DPI,
+          designElements!,
+          product,
+          pageStickers[i].bt_number,
+          logoDataUrl,
+        );
+      } else {
+        renderSticker(ctx, x, y, layout.sticker_width_mm, layout.sticker_height_mm, PREVIEW_DPI, pageStickers[i], product, fonts, logoDataUrl);
+      }
     }
 
     ctx.setLineDash([1.5 * pmm / (72 / 25.4), 2 * pmm / (72 / 25.4)]);
@@ -72,7 +102,7 @@ export function Preview({ stickers, product, layout, fonts, logoDataUrl, visible
     ctx.setLineDash([]);
 
     ctx.setTransform(1, 0, 0, 1, 0, 0);
-  }, [stickers, product, layout, fonts, logoDataUrl, visible, page, zoom]);
+  }, [stickers, product, layout, fonts, logoDataUrl, visible, page, zoom, isDesignMode, designElements, renderStickerOverride]);
 
   const handleDownload = useCallback(async () => {
     if (!product) return;
@@ -80,27 +110,61 @@ export function Preview({ stickers, product, layout, fonts, logoDataUrl, visible
     try {
       let logo = logoDataUrl;
       if (!logo && product.logo_url) {
-        try { logo = await loadImage(product.logo_url); } catch {}
+        try {
+          const img = new Image();
+          img.crossOrigin = 'anonymous';
+          await new Promise((resolve, reject) => {
+            img.onload = () => {
+              const c = document.createElement('canvas');
+              c.width = img.naturalWidth;
+              c.height = img.naturalHeight;
+              c.getContext('2d')!.drawImage(img, 0, 0);
+              logo = c.toDataURL('image/png');
+              resolve(null);
+            };
+            img.onerror = reject;
+            img.src = product.logo_url;
+          });
+        } catch {}
       }
-      const blob = generatePDF({
-        product,
-        layout,
-        stickers,
-        fonts,
-        logoDataUrl: logo,
-        filename: `stickers-${stickers[0]?.bt_number || 'batch'}.pdf`,
-      });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `stickers-${stickers[0]?.bt_number || 'batch'}.pdf`;
-      a.click();
-      URL.revokeObjectURL(url);
+
+      if (isDesignMode && generatePDFOverride && designElements) {
+        const blob = generatePDFOverride({
+          product,
+          layout,
+          stickers,
+          elements: designElements,
+          logoDataUrl: logo,
+          filename: `stickers-${stickers[0]?.bt_number || 'batch'}.pdf`,
+        });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `stickers-${stickers[0]?.bt_number || 'batch'}.pdf`;
+        a.click();
+        URL.revokeObjectURL(url);
+      } else {
+        const { generatePDF } = await import('../utils/pdf');
+        const blob = generatePDF({
+          product,
+          layout,
+          stickers,
+          fonts,
+          logoDataUrl: logo,
+          filename: `stickers-${stickers[0]?.bt_number || 'batch'}.pdf`,
+        });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `stickers-${stickers[0]?.bt_number || 'batch'}.pdf`;
+        a.click();
+        URL.revokeObjectURL(url);
+      }
     } catch (err) {
       console.error('PDF generation failed:', err);
     }
     setDownloading(false);
-  }, [product, layout, stickers, fonts, logoDataUrl]);
+  }, [product, layout, stickers, fonts, logoDataUrl, isDesignMode, designElements, generatePDFOverride]);
 
   if (!visible || !product) {
     return (
@@ -137,6 +201,7 @@ export function Preview({ stickers, product, layout, fonts, logoDataUrl, visible
           transition={{ delay: 0.1 }}
         >
           Page {page + 1} / {totalPages} &middot; {stickers.length} stickers
+          {isDesignMode && <span style={{ color: '#7c5cfc', marginLeft: 6 }}>(custom design)</span>}
         </motion.span>
         <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
           <motion.button

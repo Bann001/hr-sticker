@@ -61,3 +61,32 @@ export const DEFAULT_LAYOUT: LayoutConfig = {
   spacing_h_mm: 2,
   spacing_v_mm: 0.3,
 };
+
+export type ElementType = 'brand' | 'distributor' | 'volume' | 'bt' | 'logo' | 'custom';
+
+export interface DesignElement {
+  id: string;
+  type: ElementType;
+  xMm: number;
+  yMm: number;
+  widthMm: number;
+  heightMm: number;
+  fontSize: number;
+  fontFamily: FontFamily;
+  color: string;
+  align: CanvasTextAlign;
+  bold: boolean;
+  content?: string;
+}
+
+export interface StickerDesign {
+  id: string;
+  name: string;
+  stickerWidthMm: number;
+  stickerHeightMm: number;
+  elements: DesignElement[];
+  createdAt: string;
+}
+
+export const STICKER_W = 95;
+export const STICKER_H = 26;
