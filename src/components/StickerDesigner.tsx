@@ -131,16 +131,16 @@ export function StickerDesigner({ onUseDesign }: Props) {
 
       if (dragRef.current.type === 'move') {
         updateElement(elId, {
-          xMm: Math.max(0, s.xMm + dx),
-          yMm: Math.max(0, s.yMm + dy),
+          xMm: Math.max(0, Math.min(STICKER_W - s.widthMm, s.xMm + dx)),
+          yMm: Math.max(0, Math.min(STICKER_H - s.heightMm, s.yMm + dy)),
         });
       } else if (dragRef.current.type === 'resize') {
         let { widthMm, heightMm, xMm, yMm } = s;
         const h = dragRef.current.handle!;
-        if (h.includes('e')) widthMm = Math.max(5, s.widthMm + dx);
-        if (h.includes('w')) { widthMm = Math.max(5, s.widthMm - dx); xMm = s.xMm + dx; }
-        if (h.includes('s')) heightMm = Math.max(5, s.heightMm + dy);
-        if (h.includes('n')) { heightMm = Math.max(5, s.heightMm - dy); yMm = s.yMm + dy; }
+        if (h.includes('e')) widthMm = Math.max(5, Math.min(STICKER_W - xMm, s.widthMm + dx));
+        if (h.includes('w')) { widthMm = Math.max(5, Math.min(s.widthMm - dx, STICKER_W - (s.xMm + dx))); xMm = Math.max(0, s.xMm + dx); }
+        if (h.includes('s')) heightMm = Math.max(5, Math.min(STICKER_H - yMm, s.heightMm + dy));
+        if (h.includes('n')) { heightMm = Math.max(5, Math.min(s.heightMm - dy, STICKER_H - (s.yMm + dy))); yMm = Math.max(0, s.yMm + dy); }
         updateElement(elId, { widthMm, heightMm, xMm, yMm });
       }
     };
@@ -273,10 +273,10 @@ export function StickerDesigner({ onUseDesign }: Props) {
               >
                 <h4 style={{ ...styles.paletteTitle, marginTop: 12 }}>Properties</h4>
 
-                {sel.type === 'custom' && (
+                {sel.type !== 'logo' && (
                   <>
-                    <label style={styles.propLabel}>Text</label>
-                    <input style={styles.propInput} value={sel.content || ''} onChange={e => updateElement(sel.id, { content: e.target.value })} />
+                    <label style={styles.propLabel}>Preview text</label>
+                    <input style={styles.propInput} value={sel.content || ''} onChange={e => updateElement(sel.id, { content: e.target.value })} placeholder={sel.type === 'brand' ? 'Brand Name' : sel.type === 'distributor' ? 'Distributed by: Name' : sel.type === 'volume' ? '500ml' : sel.type === 'bt' ? 'BT: 00000' : 'Custom text'} />
                   </>
                 )}
 
@@ -379,7 +379,7 @@ export function StickerDesigner({ onUseDesign }: Props) {
                       lineHeight: 1.1,
                     }}
                   >
-                    {el.type === 'brand' ? 'Brand' : el.type === 'distributor' ? 'Distributor' : el.type === 'volume' ? 'Volume' : el.type === 'bt' ? 'BT: 00000' : el.content || 'Text'}
+                    {el.content || 'Text'}
                   </span>
                 )}
 
