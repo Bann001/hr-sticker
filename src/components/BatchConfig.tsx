@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { motion } from 'framer-motion';
 import type { Product, LayoutConfig, StickerData } from '../types';
 import { supabase } from '../supabase';
 import { removeBackground } from '../utils/removeBackground';
@@ -9,6 +10,12 @@ interface Props {
   onGenerate: (data: { stickers: StickerData[]; product: Product; logo?: string }) => void;
   disabled: boolean;
 }
+
+const fieldProps = {
+  initial: { opacity: 0, x: -8 },
+  animate: { opacity: 1, x: 0 },
+  transition: { duration: 0.3 },
+};
 
 export function BatchConfig({ product, layout, onGenerate, disabled }: Props) {
   const now = new Date();
@@ -42,8 +49,6 @@ export function BatchConfig({ product, layout, onGenerate, disabled }: Props) {
       const serial = startSerial + i;
       stickers.push({ bt_number: generateBT(serial), serial });
     }
-
-    // Save batch to Supabase
     try {
       await supabase.from('batches').insert({
         product_id: product.id,
@@ -55,7 +60,6 @@ export function BatchConfig({ product, layout, onGenerate, disabled }: Props) {
       });
     } catch { /* non-blocking */ }
 
-    // Load logo if product has one
     let logo: string | undefined;
     if (product.logo_url) {
       try {
@@ -84,50 +88,70 @@ export function BatchConfig({ product, layout, onGenerate, disabled }: Props) {
     <div>
       <h3 style={styles.title}>Batch</h3>
 
-      <label style={styles.label}>Batch code (YYMM)</label>
-      <input
-        style={styles.input}
-        value={batchCode}
-        onChange={e => setBatchCode(e.target.value.replace(/\D/g, '').slice(0, 4))}
-        placeholder="2612"
-        maxLength={4}
-      />
+      <motion.div {...fieldProps} transition={{ delay: 0.05 }}>
+        <label style={styles.label}>Batch code (YYMM)</label>
+        <input
+          style={styles.input}
+          value={batchCode}
+          onChange={e => setBatchCode(e.target.value.replace(/\D/g, '').slice(0, 4))}
+          placeholder="2612"
+          maxLength={4}
+        />
+      </motion.div>
 
-      <label style={styles.label}>Batch number (2 digits)</label>
-      <input
-        style={styles.input}
-        value={batchNum}
-        onChange={e => setBatchNum(e.target.value.replace(/\D/g, '').slice(0, 2))}
-        placeholder="01"
-        maxLength={2}
-      />
+      <motion.div {...fieldProps} transition={{ delay: 0.1 }}>
+        <label style={styles.label}>Batch number (2 digits)</label>
+        <input
+          style={styles.input}
+          value={batchNum}
+          onChange={e => setBatchNum(e.target.value.replace(/\D/g, '').slice(0, 2))}
+          placeholder="01"
+          maxLength={2}
+        />
+      </motion.div>
 
-      <label style={styles.label}>Start serial</label>
-      <input
-        style={styles.input}
-        type="number"
-        min={1}
-        value={startSerial}
-        onChange={e => setStartSerial(Math.max(1, parseInt(e.target.value) || 1))}
-      />
+      <motion.div {...fieldProps} transition={{ delay: 0.15 }}>
+        <label style={styles.label}>Start serial</label>
+        <input
+          style={styles.input}
+          type="number"
+          min={1}
+          value={startSerial}
+          onChange={e => setStartSerial(Math.max(1, parseInt(e.target.value) || 1))}
+        />
+      </motion.div>
 
-      <label style={styles.label}>Quantity</label>
-      <input
-        style={styles.input}
-        type="number"
-        min={1}
-        max={10000}
-        value={quantity}
-        onChange={e => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
-      />
+      <motion.div {...fieldProps} transition={{ delay: 0.2 }}>
+        <label style={styles.label}>Quantity</label>
+        <input
+          style={styles.input}
+          type="number"
+          min={1}
+          max={10000}
+          value={quantity}
+          onChange={e => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
+        />
+      </motion.div>
 
-      <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
-        <button style={styles.previewBtn} onClick={handlePreview} disabled={disabled}>
+      <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+        <motion.button
+          style={styles.previewBtn}
+          onClick={handlePreview}
+          disabled={disabled}
+          whileHover={disabled ? {} : { scale: 1.03 }}
+          whileTap={disabled ? {} : { scale: 0.97 }}
+        >
           Preview
-        </button>
-        <button style={styles.genBtn} onClick={handleGenerate} disabled={disabled || generating}>
+        </motion.button>
+        <motion.button
+          style={styles.genBtn}
+          onClick={handleGenerate}
+          disabled={disabled || generating}
+          whileHover={disabled || generating ? {} : { scale: 1.03 }}
+          whileTap={disabled || generating ? {} : { scale: 0.97 }}
+        >
           {generating ? 'Generating...' : 'Generate & Save'}
-        </button>
+        </motion.button>
       </div>
     </div>
   );

@@ -1,3 +1,4 @@
+import { motion } from 'framer-motion';
 import type { LayoutConfig as LayoutConfigType } from '../types';
 
 interface Props {
@@ -29,8 +30,14 @@ export function LayoutConfig({ layout, onChange }: Props) {
     <div>
       <h3 style={styles.title}>Layout</h3>
       <div style={styles.grid}>
-        {fields.map(f => (
-          <div key={f.key} style={styles.field}>
+        {fields.map((f, i) => (
+          <motion.div
+            key={f.key}
+            style={styles.field}
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: i * 0.03, duration: 0.3 }}
+          >
             <label style={styles.label}>{f.label}</label>
             <input
               style={styles.input}
@@ -41,7 +48,7 @@ export function LayoutConfig({ layout, onChange }: Props) {
               value={layout[f.key]}
               onChange={e => set(f.key, e.target.value)}
             />
-          </div>
+          </motion.div>
         ))}
       </div>
     </div>

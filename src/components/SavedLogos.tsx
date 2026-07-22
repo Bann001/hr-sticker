@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface SavedLogo {
   id: string;
@@ -31,7 +32,6 @@ export function saveLogoToLibrary(dataUrl: string, name: string) {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(all));
   } catch {
-    // quota exceeded — drop oldest until it fits
     while (all.length > 0) {
       all.shift();
       try { localStorage.setItem(STORAGE_KEY, JSON.stringify(all)); break; }
@@ -56,40 +56,88 @@ export function SavedLogos({ onSelect }: Props) {
 
   return (
     <>
-      <button style={styles.folderBtn} onClick={() => setOpen(true)} title="Saved logos">
+      <motion.button
+        style={styles.folderBtn}
+        onClick={() => setOpen(true)}
+        title="Saved logos"
+        whileHover={{ scale: 1.08 }}
+        whileTap={{ scale: 0.92 }}
+      >
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
         </svg>
-      </button>
+      </motion.button>
 
-      {open && (
-        <div style={styles.overlay} onClick={() => setOpen(false)}>
-          <div style={styles.panel} onClick={e => e.stopPropagation()}>
-            <div style={styles.panelHeader}>
-              <h3 style={styles.panelTitle}>Saved Logos</h3>
-              <button style={styles.closeBtn} onClick={() => setOpen(false)}>&#x2715;</button>
-            </div>
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            style={styles.overlay}
+            onClick={() => setOpen(false)}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+          >
+            <motion.div
+              style={styles.panel}
+              onClick={e => e.stopPropagation()}
+              initial={{ opacity: 0, scale: 0.92, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.92, y: 20 }}
+              transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+            >
+              <div style={styles.panelHeader}>
+                <h3 style={styles.panelTitle}>Saved Logos</h3>
+                <motion.button
+                  style={styles.closeBtn}
+                  onClick={() => setOpen(false)}
+                  whileHover={{ rotate: 90 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  &#x2715;
+                </motion.button>
+              </div>
 
-            <div style={styles.grid}>
-              {logos.length === 0 && <p style={styles.empty}>No saved logos yet. Upload a logo and save a product to add one.</p>}
-              {logos.map(logo => (
-                <div key={logo.id} style={styles.card}>
-                  <img
-                    src={logo.dataUrl}
-                    alt={logo.name}
-                    style={styles.thumb}
-                    onClick={() => { onSelect(logo.dataUrl); setOpen(false); }}
-                  />
-                  <div style={styles.cardBody}>
-                    <span style={styles.cardName}>{logo.name}</span>
-                    <button style={styles.delBtn} onClick={() => handleDelete(logo.id)} title="Delete">&#x1F5D1;</button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
+              <div style={styles.grid}>
+                {logos.length === 0 && (
+                  <p style={styles.empty}>No saved logos yet. Upload a logo and save a product to add one.</p>
+                )}
+                {logos.map((logo, i) => (
+                  <motion.div
+                    key={logo.id}
+                    style={styles.card}
+                    initial={{ opacity: 0, y: 12 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: i * 0.05, duration: 0.25 }}
+                    layout
+                  >
+                    <motion.img
+                      src={logo.dataUrl}
+                      alt={logo.name}
+                      style={styles.thumb}
+                      onClick={() => { onSelect(logo.dataUrl); setOpen(false); }}
+                      whileHover={{ scale: 1.05 }}
+                      transition={{ duration: 0.2 }}
+                    />
+                    <div style={styles.cardBody}>
+                      <span style={styles.cardName}>{logo.name}</span>
+                      <motion.button
+                        style={styles.delBtn}
+                        onClick={() => handleDelete(logo.id)}
+                        title="Delete"
+                        whileHover={{ scale: 1.3, color: '#ef4444' }}
+                        transition={{ duration: 0.15 }}
+                      >
+                        &#x1F5D1;
+                      </motion.button>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </>
   );
 }

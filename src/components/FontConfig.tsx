@@ -1,3 +1,4 @@
+import { motion } from 'framer-motion';
 import type { FontConfig as FontConfigType, FontFamily } from '../types';
 
 interface Props {
@@ -22,8 +23,14 @@ export function FontConfig({ config, onChange }: Props) {
     <div>
       <h3 style={styles.title}>Fonts</h3>
       <div style={styles.grid}>
-        {fields.map(f => (
-          <div key={f.key} style={styles.field}>
+        {fields.map((f, i) => (
+          <motion.div
+            key={f.key}
+            style={styles.field}
+            initial={{ opacity: 0, x: -6 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: i * 0.08, duration: 0.3 }}
+          >
             <label style={styles.label}>{f.label}</label>
             <select
               style={styles.select}
@@ -34,7 +41,7 @@ export function FontConfig({ config, onChange }: Props) {
                 <option key={fam} value={fam}>{fam}</option>
               ))}
             </select>
-          </div>
+          </motion.div>
         ))}
       </div>
     </div>

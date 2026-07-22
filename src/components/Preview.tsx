@@ -1,4 +1,5 @@
 import { useRef, useEffect, useState, useCallback } from 'react';
+import { motion } from 'framer-motion';
 import type { LayoutConfig, StickerData, Product, FontConfig } from '../types';
 import { generatePDF, loadImage, renderSticker } from '../utils/pdf';
 
@@ -51,7 +52,6 @@ export function Preview({ stickers, product, layout, fonts, logoDataUrl, visible
       renderSticker(ctx, x, y, layout.sticker_width_mm, layout.sticker_height_mm, PREVIEW_DPI, pageStickers[i], product, fonts, logoDataUrl);
     }
 
-    // Cut guides
     ctx.setLineDash([1.5 * pmm / (72 / 25.4), 2 * pmm / (72 / 25.4)]);
     ctx.strokeStyle = 'rgba(0,0,0,0.06)';
     ctx.lineWidth = 0.15;
@@ -104,34 +104,84 @@ export function Preview({ stickers, product, layout, fonts, logoDataUrl, visible
 
   if (!visible || !product) {
     return (
-      <div style={styles.empty}>
-        <p>Select a product, configure batch settings, and click <strong>Preview</strong> to begin.</p>
-      </div>
+      <motion.div
+        style={styles.empty}
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4 }}
+      >
+        <motion.p
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.15 }}
+        >
+          Select a product, configure batch settings, and click <strong>Preview</strong> to begin.
+        </motion.p>
+      </motion.div>
     );
   }
 
   return (
-    <div style={styles.container}>
+    <motion.div
+      style={styles.container}
+      key={`${page}-${stickers.length}`}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.3 }}
+    >
       <div style={styles.toolbar}>
-        <span style={{ color: '#999aae', fontSize: 13 }}>
+        <motion.span
+          style={{ color: '#999aae', fontSize: 13 }}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.1 }}
+        >
           Page {page + 1} / {totalPages} &middot; {stickers.length} stickers
-        </span>
+        </motion.span>
         <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-          <button style={styles.navBtn} disabled={page === 0} onClick={() => setPage(p => p - 1)}>&larr;</button>
+          <motion.button
+            style={styles.navBtn}
+            disabled={page === 0}
+            onClick={() => setPage(p => p - 1)}
+            whileHover={page !== 0 ? { scale: 1.06 } : {}}
+            whileTap={page !== 0 ? { scale: 0.94 } : {}}
+          >
+            &larr;
+          </motion.button>
           <span style={{ color: '#999aae', fontSize: 12, minWidth: 36, textAlign: 'center' }}>{Math.round(zoom * 100)}%</span>
-          <button style={styles.navBtn} disabled={page >= totalPages - 1} onClick={() => setPage(p => p + 1)}>&rarr;</button>
-          <button style={styles.navBtn} onClick={() => setZoom(z => Math.max(0.25, z - 0.25))}>&minus;</button>
-          <button style={styles.navBtn} onClick={() => setZoom(1)}>&#x25CB;</button>
-          <button style={styles.navBtn} onClick={() => setZoom(z => Math.min(4, z + 0.25))}>+</button>
-          <button style={styles.dlBtn} onClick={handleDownload} disabled={downloading}>
+          <motion.button
+            style={styles.navBtn}
+            disabled={page >= totalPages - 1}
+            onClick={() => setPage(p => p + 1)}
+            whileHover={page < totalPages - 1 ? { scale: 1.06 } : {}}
+            whileTap={page < totalPages - 1 ? { scale: 0.94 } : {}}
+          >
+            &rarr;
+          </motion.button>
+          <motion.button style={styles.navBtn} onClick={() => setZoom(z => Math.max(0.25, z - 0.25))} whileHover={{ scale: 1.06 }} whileTap={{ scale: 0.94 }}>&minus;</motion.button>
+          <motion.button style={styles.navBtn} onClick={() => setZoom(1)} whileHover={{ scale: 1.06 }} whileTap={{ scale: 0.94 }}>&#x25CB;</motion.button>
+          <motion.button style={styles.navBtn} onClick={() => setZoom(z => Math.min(4, z + 0.25))} whileHover={{ scale: 1.06 }} whileTap={{ scale: 0.94 }}>+</motion.button>
+          <motion.button
+            style={styles.dlBtn}
+            onClick={handleDownload}
+            disabled={downloading}
+            whileHover={downloading ? {} : { scale: 1.04 }}
+            whileTap={downloading ? {} : { scale: 0.96 }}
+          >
             {downloading ? 'Generating...' : 'Download PDF'}
-          </button>
+          </motion.button>
         </div>
       </div>
-      <div style={styles.canvasWrap}>
+      <motion.div
+        style={styles.canvasWrap}
+        key={page}
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3 }}
+      >
         <canvas ref={canvasRef} style={styles.canvas} />
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 }
 
