@@ -43,13 +43,14 @@ export function renderDesign(
       continue;
     }
 
-    let text = '';
-    switch (el.type) {
-      case 'brand':    text = product.name; break;
-      case 'distributor': text = `Distributed by: ${product.distributor}`; break;
-      case 'volume':   text = product.volume; break;
-      case 'bt':       text = `BT: ${btNumber}`; break;
-      case 'custom':   text = el.content || ''; break;
+    let text = el.content || '';
+    if (!text) {
+      switch (el.type) {
+        case 'brand':    text = product.name; break;
+        case 'distributor': text = `Distributed by: ${product.distributor}`; break;
+        case 'volume':   text = product.volume; break;
+        case 'bt':       text = `BT: ${btNumber}`; break;
+      }
     }
 
     if (!text) continue;

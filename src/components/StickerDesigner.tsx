@@ -263,14 +263,8 @@ export function StickerDesigner({ onUseDesign }: Props) {
             <SavedLogos onSelect={url => { setLogoDataUrl(url); setLogoPreview(url); if (!elements.some(el => el.type === 'logo')) addElement('logo'); }} />
           </div>
 
-          <AnimatePresence>
-            {sel && (
-              <motion.div
-                style={styles.properties}
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: 'auto' }}
-                exit={{ opacity: 0, height: 0 }}
-              >
+          {sel && (
+            <div style={styles.properties}>
                 <h4 style={{ ...styles.paletteTitle, marginTop: 12 }}>Properties</h4>
 
                 {sel.type !== 'logo' && (
@@ -313,9 +307,8 @@ export function StickerDesigner({ onUseDesign }: Props) {
                 >
                   Delete
                 </motion.button>
-              </motion.div>
-            )}
-          </AnimatePresence>
+            </div>
+          )}
         </div>
 
         {/* Canvas */}
