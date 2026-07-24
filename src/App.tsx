@@ -90,6 +90,7 @@ export default function App() {
             onLogoData={setLogoDataUrl}
             onGenerate={handleGenerate}
             onClearDesign={() => setDesignElements(null)}
+            onUseDesign={handleUseDesign}
           />
         );
       case 'chat':

@@ -54,10 +54,10 @@ export function BatchConfig({ product, layout, onGenerate, disabled, designMode 
       const serial = startSerial + i;
       stickers.push({ bt_number: generateBT(serial), serial });
     }
-    if (product) {
+    if (product || designMode) {
       try {
         await supabase.from('batches').insert({
-          product_id: product.id,
+          product_id: product?.id || null,
           batch_code: batchCode,
           start_serial: startSerial,
           end_serial: startSerial + quantity - 1,

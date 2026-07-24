@@ -21,7 +21,7 @@ CREATE TABLE products (
 
 CREATE TABLE batches (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  product_id UUID NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+  product_id UUID REFERENCES products(id) ON DELETE CASCADE,
   batch_code TEXT NOT NULL,
   start_serial INTEGER NOT NULL,
   end_serial INTEGER NOT NULL,

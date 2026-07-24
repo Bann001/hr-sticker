@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import type { Product, LayoutConfig as LayoutConfigType, StickerData, FontConfig as FontConfigType, DesignElement } from '../types';
 import { supabase } from '../supabase';
+import { loadDesigns, findDesign } from '../lib/designs';
+import type { StickerDesign } from '../lib/designs';
 import { ProductSelector } from '../components/ProductSelector';
 import { BatchConfig } from '../components/BatchConfig';
 import { LayoutConfig } from '../components/LayoutConfig';
@@ -38,15 +40,18 @@ interface Props {
   onLogoData: (url?: string) => void;
   onGenerate: (data: { stickers: StickerData[]; product: Product; logo?: string }) => void;
   onClearDesign: () => void;
+  onUseDesign?: (design: { elements: DesignElement[]; logo_url?: string }) => void;
 }
 
 export function TasksPage({
   product, layout, fonts, stickers, logoDataUrl, generated, designElements, isDesignMode,
   startInGenerate, onStartInGenerateConsumed,
-  onProductChange, onLayoutChange, onFontsChange, onLogoData, onGenerate, onClearDesign,
+  onProductChange, onLayoutChange, onFontsChange, onLogoData, onGenerate, onClearDesign, onUseDesign,
 }: Props) {
   const [mode, setMode] = useState<'list' | 'generate'>('list');
   const [batches, setBatches] = useState<BatchRow[]>([]);
+  const [showDesignPicker, setShowDesignPicker] = useState(false);
+  const [savedDesigns, setSavedDesigns] = useState<StickerDesign[]>([]);
 
   const fetchBatches = useCallback(async () => {
     const { data } = await supabase
@@ -70,6 +75,22 @@ export function TasksPage({
       onStartInGenerateConsumed?.();
     }
   }, [startInGenerate, onStartInGenerateConsumed]);
+
+  const handleNewBatch = () => {
+    if (isDesignMode) {
+      setMode('generate');
+    } else {
+      loadDesigns().then(d => { setSavedDesigns(d); setShowDesignPicker(true); });
+    }
+  };
+
+  const handleSelectDesign = async (designId: string) => {
+    const d = await findDesign(designId);
+    if (d) {
+      onUseDesign?.(d);
+      setShowDesignPicker(false);
+    }
+  };
 
   if (mode === 'generate') {
     return (
@@ -142,7 +163,7 @@ export function TasksPage({
           <p className="text-sm text-text-secondary mt-1">Manage your sticker generation batches</p>
         </div>
         <button
-          onClick={() => setMode('generate')}
+          onClick={handleNewBatch}
           className="h-10 px-5 bg-accent text-selected-text rounded-xl font-semibold text-sm hover:bg-accent-hover transition-all duration-150 flex items-center gap-2"
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -151,6 +172,43 @@ export function TasksPage({
           New Batch
         </button>
       </div>
+
+      {/* Design picker modal */}
+      {showDesignPicker && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50" onClick={() => setShowDesignPicker(false)}>
+          <div className="bg-bg-sidebar border border-border rounded-2xl p-6 max-w-2xl w-full mx-4 max-h-[80vh] overflow-y-auto shadow-2xl" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-5">
+              <h2 className="text-lg font-semibold text-text-primary">Select a Design</h2>
+              <button onClick={() => setShowDesignPicker(false)} className="text-text-muted hover:text-text-primary text-lg">&times;</button>
+            </div>
+            {savedDesigns.length === 0 ? (
+              <div className="text-center py-10">
+                <p className="text-sm text-text-muted">No saved designs yet. Create one in the Projects page first.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-3">
+                {savedDesigns.map(d => (
+                  <div key={d.id} className="bg-bg-surface border border-border rounded-xl p-4 hover:border-accent/30 transition-colors">
+                    <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center mb-2">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FFB800" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" /><polyline points="14 2 14 8 20 8" />
+                      </svg>
+                    </div>
+                    <p className="text-sm font-semibold text-text-primary truncate">{d.name}</p>
+                    <p className="text-xs text-text-muted mt-0.5">{d.elements.length} elements</p>
+                    <button
+                      onClick={() => handleSelectDesign(d.id)}
+                      className="mt-3 w-full h-8 bg-accent text-selected-text rounded-lg text-xs font-semibold hover:bg-accent-hover transition-all"
+                    >
+                      Select
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {generated && stickers.length > 0 && (
         <div className="bg-success/10 border border-success/20 rounded-2xl p-4">
@@ -202,7 +260,7 @@ export function TasksPage({
                   {batch.status.charAt(0).toUpperCase() + batch.status.slice(1)}
                 </span>
               </div>
-              <p className="text-sm text-text-secondary mt-0.5">{batch.products?.name || 'Unknown product'}</p>
+              <p className="text-sm text-text-secondary mt-0.5">{batch.products?.name || 'Custom design'}</p>
               <p className="text-xs text-text-muted mt-0.5">{batch.quantity} stickers · BT: {batch.batch_code}{String(batch.start_serial).padStart(5, '0')}–{batch.batch_code}{String(batch.end_serial).padStart(5, '0')}</p>
             </div>
             <div className="text-xs text-text-muted text-right shrink-0">
