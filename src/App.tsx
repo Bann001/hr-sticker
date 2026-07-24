@@ -3,10 +3,10 @@ import type { Product, LayoutConfig as LayoutConfigType, StickerData, FontConfig
 import { DEFAULT_LAYOUT, DEFAULT_FONTS } from './types';
 import { NavSidebar } from './components/ui/sidebar';
 import { TopToolbar } from './components/ui/toolbar';
+import { StickerDesigner } from './components/StickerDesigner';
 import { TasksPage } from './pages/TasksPage';
 import { DashboardPage } from './pages/Dashboard';
 import { ProjectsPage } from './pages/ProjectsPage';
-import { LogoCreator } from './pages/LogoCreator';
 import { TicketsPage } from './pages/Tickets';
 import { ChatPage } from './pages/Chat';
 import { ChatBuddyPage } from './pages/ChatBuddy';
@@ -53,9 +53,13 @@ export default function App() {
       case 'home':
         return <DashboardPage />;
       case 'create':
-        return <LogoCreator />;
+        return (
+          <div className="flex-1 flex overflow-hidden">
+            <StickerDesigner onUseDesign={handleUseDesign} />
+          </div>
+        );
       case 'projects':
-        return <ProjectsPage onUseDesign={handleUseDesign} />;
+        return <ProjectsPage />;
       case 'tickets':
         return <TicketsPage />;
       case 'tasks':
