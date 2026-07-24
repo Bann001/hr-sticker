@@ -3,10 +3,7 @@ import type { Product, LayoutConfig as LayoutConfigType, StickerData, FontConfig
 import { supabase } from '../supabase';
 import { loadDesigns, findDesign } from '../lib/designs';
 import type { StickerDesign } from '../lib/designs';
-import { ProductSelector } from '../components/ProductSelector';
 import { BatchConfig } from '../components/BatchConfig';
-import { LayoutConfig } from '../components/LayoutConfig';
-import { FontConfig } from '../components/FontConfig';
 import { Preview } from '../components/Preview';
 import { generatePDF, generatePDFFromDesign } from '../utils/pdf';
 import { renderDesign } from '../utils/renderDesign';
@@ -44,7 +41,7 @@ interface Props {
 }
 
 export function TasksPage({
-  product, layout, fonts, stickers, logoDataUrl, generated, designElements, isDesignMode,
+  product, layout, fonts, stickers, logoDataUrl, generated, designElements,
   startInGenerate, onStartInGenerateConsumed,
   onProductChange, onLayoutChange, onFontsChange, onLogoData, onGenerate, onClearDesign, onUseDesign,
 }: Props) {
@@ -52,6 +49,7 @@ export function TasksPage({
   const [batches, setBatches] = useState<BatchRow[]>([]);
   const [showDesignPicker, setShowDesignPicker] = useState(false);
   const [savedDesigns, setSavedDesigns] = useState<StickerDesign[]>([]);
+  const [currentDesignId, setCurrentDesignId] = useState<string | null>(null);
 
   const fetchBatches = useCallback(async () => {
     const { data } = await supabase
@@ -76,20 +74,34 @@ export function TasksPage({
     }
   }, [startInGenerate, onStartInGenerateConsumed]);
 
-  const handleNewBatch = () => {
-    if (isDesignMode) {
-      setMode('generate');
-    } else {
-      loadDesigns().then(d => { setSavedDesigns(d); setShowDesignPicker(true); });
+  useEffect(() => {
+    if (designElements && designElements.length > 0 && !currentDesignId) {
+      setCurrentDesignId('loaded');
     }
+  }, [designElements, currentDesignId]);
+
+  const handleNewBatch = () => {
+    loadDesigns().then(d => { setSavedDesigns(d); setShowDesignPicker(true); });
   };
 
   const handleSelectDesign = async (designId: string) => {
     const d = await findDesign(designId);
     if (d) {
+      setCurrentDesignId(designId);
       onUseDesign?.(d);
       setShowDesignPicker(false);
     }
+  };
+
+  const handleClear = () => {
+    onClearDesign();
+    setCurrentDesignId(null);
+    setMode('list');
+  };
+
+  const handlePreview = () => {
+    if (!designElements || designElements.length === 0) return;
+    setMode('generate');
   };
 
   if (mode === 'generate') {
@@ -106,40 +118,26 @@ export function TasksPage({
             Back to tasks
           </button>
 
-          {isDesignMode && (
+          {currentDesignId && (
             <div className="flex items-center gap-2 px-4 py-2.5 bg-success/10 border border-success/20 rounded-xl text-sm text-success">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
                 <path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z" />
                 <path d="m9 12 2 2 4-4" />
               </svg>
               <span className="flex-1 text-sm">Printing custom design</span>
-              <button onClick={onClearDesign} className="text-xs font-medium text-text-muted hover:text-text-primary underline transition-colors">
+              <button onClick={handleClear} className="text-xs font-medium text-text-muted hover:text-text-primary underline transition-colors">
                 clear
               </button>
             </div>
           )}
-          {!isDesignMode && (
-            <Card><CardContent className="p-0">
-              <ProductSelector product={product} onProductChange={onProductChange} onLogoData={onLogoData} />
-            </CardContent></Card>
-          )}
+
           <Card><CardContent className="p-0">
-            <BatchConfig product={product} layout={layout} onGenerate={onGenerate} disabled={!product && !isDesignMode} designMode={isDesignMode} />
+            <BatchConfig product={product} layout={layout} onGenerate={onGenerate} />
           </CardContent></Card>
-          {!isDesignMode && (
-            <>
-              <Card><CardContent className="p-0">
-                <FontConfig config={fonts} onChange={onFontsChange} />
-              </CardContent></Card>
-              <Card><CardContent className="p-0">
-                <LayoutConfig layout={layout} onChange={onLayoutChange} />
-              </CardContent></Card>
-            </>
-          )}
         </aside>
         <main className="flex-1 min-w-0 overflow-hidden">
           <Preview
-            key={generated && isDesignMode ? 'design-preview' : generated ? 'preview' : 'empty'}
+            key={generated ? 'design-preview' : 'empty'}
             stickers={stickers}
             product={product}
             layout={layout}
@@ -173,7 +171,6 @@ export function TasksPage({
         </button>
       </div>
 
-      {/* Design picker modal */}
       {showDesignPicker && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50" onClick={() => setShowDesignPicker(false)}>
           <div className="bg-bg-sidebar border border-border rounded-2xl p-6 max-w-2xl w-full mx-4 max-h-[80vh] overflow-y-auto shadow-2xl" onClick={e => e.stopPropagation()}>
@@ -183,7 +180,7 @@ export function TasksPage({
             </div>
             {savedDesigns.length === 0 ? (
               <div className="text-center py-10">
-                <p className="text-sm text-text-muted">No saved designs yet. Create one in the Projects page first.</p>
+                <p className="text-sm text-text-muted">No saved designs yet. Create one in the Create page first.</p>
               </div>
             ) : (
               <div className="grid grid-cols-2 gap-3">
@@ -206,6 +203,16 @@ export function TasksPage({
                 ))}
               </div>
             )}
+            {currentDesignId && (
+              <div className="mt-3 pt-3 border-t border-border">
+                <button
+                  onClick={() => { setShowDesignPicker(false); setMode('generate'); }}
+                  className="w-full h-10 bg-bg-surface border border-border text-text-primary rounded-xl text-sm font-semibold hover:bg-bg-sidebar transition-all"
+                >
+                  Continue with current design
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -218,7 +225,6 @@ export function TasksPage({
         </div>
       )}
 
-      {/* Batch list */}
       <div className="space-y-3">
         {batches.length === 0 && (
           <div className="bg-bg-surface border border-border rounded-2xl p-8 flex items-center justify-center">
