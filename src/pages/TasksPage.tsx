@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import type { Product, LayoutConfig as LayoutConfigType, StickerData, FontConfig as FontConfigType, DesignElement } from '../types';
+import { supabase } from '../supabase';
 import { ProductSelector } from '../components/ProductSelector';
 import { BatchConfig } from '../components/BatchConfig';
 import { LayoutConfig } from '../components/LayoutConfig';
@@ -8,6 +9,17 @@ import { Preview } from '../components/Preview';
 import { generatePDF, generatePDFFromDesign } from '../utils/pdf';
 import { renderDesign } from '../utils/renderDesign';
 import { Card, CardContent } from '../components/ui/card';
+
+interface BatchRow {
+  id: string;
+  batch_code: string;
+  start_serial: number;
+  end_serial: number;
+  quantity: number;
+  status: string;
+  created_at: string;
+  products: { name: string } | null;
+}
 
 interface Props {
   product: Product | null;
@@ -26,26 +38,35 @@ interface Props {
   onClearDesign: () => void;
 }
 
-const mockBatches = [
-  { id: 'BCH-001', product: 'Premium Honey 250ml', stickers: 120, btRange: '26120100001–26120100120', status: 'completed', date: '2026-07-20' },
-  { id: 'BCH-002', product: 'Organic Olive Oil 500ml', stickers: 84, btRange: '26120100121–26120100204', status: 'completed', date: '2026-07-18' },
-  { id: 'BCH-003', product: 'Spiced Rum 700ml', stickers: 200, btRange: '26120100205–26120100404', status: 'pending', date: '2026-07-22' },
-  { id: 'BCH-004', product: 'Cold Brew Coffee 330ml', stickers: 60, btRange: '26120100405–26120100464', status: 'failed', date: '2026-07-15' },
-  { id: 'BCH-005', product: 'Craft Beer IPA 440ml', stickers: 150, btRange: '26120100465–26120100614', status: 'completed', date: '2026-07-10' },
-];
-
 export function TasksPage({
   product, layout, fonts, stickers, logoDataUrl, generated, designElements, isDesignMode,
   onProductChange, onLayoutChange, onFontsChange, onLogoData, onGenerate, onClearDesign,
 }: Props) {
   const [mode, setMode] = useState<'list' | 'generate'>('list');
+  const [batches, setBatches] = useState<BatchRow[]>([]);
+
+  const fetchBatches = useCallback(async () => {
+    const { data } = await supabase
+      .from('batches')
+      .select('id, batch_code, start_serial, end_serial, quantity, status, created_at, products(name)')
+      .order('created_at', { ascending: false });
+    if (data) setBatches(data as unknown as BatchRow[]);
+  }, []);
+
+  useEffect(() => {
+    fetchBatches();
+  }, [fetchBatches]);
+
+  useEffect(() => {
+    if (generated) setMode('generate');
+  }, [generated]);
 
   if (mode === 'generate') {
     return (
       <div className="flex-1 flex overflow-hidden">
         <aside className="w-[340px] min-w-[340px] bg-bg-sidebar border-r border-border overflow-y-auto p-5 space-y-5">
           <button
-            onClick={() => setMode('list')}
+            onClick={() => { setMode('list'); fetchBatches(); }}
             className="flex items-center gap-2 text-sm text-text-secondary hover:text-text-primary transition-colors mb-2"
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -125,7 +146,18 @@ export function TasksPage({
 
       {/* Batch list */}
       <div className="space-y-3">
-        {mockBatches.map((batch, i) => (
+        {batches.length === 0 && (
+          <div className="bg-bg-surface border border-border rounded-2xl p-8 flex items-center justify-center">
+            <div className="text-center">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#727272" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="mx-auto mb-3">
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2" /><line x1="3" y1="9" x2="21" y2="9" /><line x1="9" y1="21" x2="9" y2="9" />
+              </svg>
+              <p className="text-sm text-text-muted">No batches yet</p>
+              <p className="text-xs text-text-muted mt-1">Click New Batch to generate your first sticker batch</p>
+            </div>
+          </div>
+        )}
+        {batches.map((batch) => (
           <div
             key={batch.id}
             className="bg-bg-surface border border-border rounded-2xl p-5 flex items-center gap-5 hover:border-accent/20 transition-colors"
@@ -145,7 +177,7 @@ export function TasksPage({
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-3">
-                <span className="text-sm font-semibold text-text-primary">{batch.id}</span>
+                <span className="text-sm font-semibold text-text-primary">BCH-{String(batches.indexOf(batch) + 1).padStart(3, '0')}</span>
                 <span className={`text-xs font-semibold px-2.5 py-0.5 rounded-full ${
                   batch.status === 'completed' ? 'bg-success/10 text-success border border-success/20' :
                   batch.status === 'pending' ? 'bg-accent/10 text-accent border border-accent/20' :
@@ -154,11 +186,11 @@ export function TasksPage({
                   {batch.status.charAt(0).toUpperCase() + batch.status.slice(1)}
                 </span>
               </div>
-              <p className="text-sm text-text-secondary mt-0.5">{batch.product}</p>
-              <p className="text-xs text-text-muted mt-0.5">{batch.stickers} stickers · BT: {batch.btRange}</p>
+              <p className="text-sm text-text-secondary mt-0.5">{batch.products?.name || 'Unknown product'}</p>
+              <p className="text-xs text-text-muted mt-0.5">{batch.quantity} stickers · BT: {batch.batch_code}{String(batch.start_serial).padStart(5, '0')}–{batch.batch_code}{String(batch.end_serial).padStart(5, '0')}</p>
             </div>
             <div className="text-xs text-text-muted text-right shrink-0">
-              <div>{batch.date}</div>
+              <div>{new Date(batch.created_at).toLocaleDateString()}</div>
             </div>
           </div>
         ))}

@@ -56,6 +56,7 @@ export function BatchConfig({ product, layout, onGenerate, disabled }: Props) {
         start_serial: startSerial,
         end_serial: startSerial + quantity - 1,
         quantity,
+        status: 'completed',
         layout_config: layout,
       });
     } catch { /* non-blocking */ }

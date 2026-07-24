@@ -26,6 +26,7 @@ CREATE TABLE batches (
   start_serial INTEGER NOT NULL,
   end_serial INTEGER NOT NULL,
   quantity INTEGER NOT NULL,
+  status TEXT NOT NULL DEFAULT 'completed',
   layout_config JSONB,
   created_at TIMESTAMPTZ DEFAULT now()
 );
