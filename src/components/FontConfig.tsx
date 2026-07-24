@@ -6,7 +6,7 @@ interface Props {
   onChange: (c: FontConfigType) => void;
 }
 
-const families: FontFamily[] = ['Helvetica', 'Arial', 'Times', 'Georgia', 'Verdana', 'Trebuchet MS', 'Courier'];
+const families: FontFamily[] = ['Carbona', 'Space Grotesk', 'Space Mono'];
 
 const fields: { key: keyof FontConfigType; label: string }[] = [
   { key: 'brand', label: 'Brand font' },

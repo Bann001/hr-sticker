@@ -35,7 +35,7 @@ export interface StickerData {
   serial: number;
 }
 
-export type FontFamily = 'Helvetica' | 'Arial' | 'Times' | 'Georgia' | 'Verdana' | 'Trebuchet MS' | 'Courier';
+export type FontFamily = 'Carbona' | 'Space Grotesk' | 'Space Mono';
 
 export interface FontConfig {
   brand: FontFamily;
@@ -44,9 +44,9 @@ export interface FontConfig {
 }
 
 export const DEFAULT_FONTS: FontConfig = {
-  brand: 'Helvetica',
-  body: 'Helvetica',
-  bt: 'Courier',
+  brand: 'Carbona',
+  body: 'Space Grotesk',
+  bt: 'Space Mono',
 };
 
 export const DEFAULT_LAYOUT: LayoutConfig = {

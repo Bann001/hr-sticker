@@ -21,7 +21,7 @@ function defaultElement(type: ElementType, existing: DesignElement[]): DesignEle
   const base: Partial<DesignElement> = {
     id: uid(),
     type,
-    fontFamily: 'Helvetica',
+    fontFamily: 'Space Grotesk',
     color: '#1e1e1e',
     align: 'left',
     bold: false,
@@ -276,7 +276,7 @@ export function StickerDesigner({ onUseDesign }: Props) {
 
                 <label style={styles.propLabel}>Font</label>
                 <select style={styles.propSelect} value={sel.fontFamily} onChange={e => updateElement(sel.id, { fontFamily: e.target.value as FontFamily })}>
-                  {['Helvetica', 'Arial', 'Times', 'Georgia', 'Verdana', 'Trebuchet MS', 'Courier'].map(f => (
+                  {['Carbona', 'Space Grotesk', 'Space Mono'].map(f => (
                     <option key={f} value={f}>{f}</option>
                   ))}
                 </select>
