@@ -20,20 +20,26 @@ export function FontConfig({ config, onChange }: Props) {
   }
 
   return (
-    <div>
-      <h3 style={styles.title}>Fonts</h3>
-      <div style={styles.grid}>
+    <div className="p-5">
+      <h3 className="text-[11px] font-semibold text-text-muted uppercase tracking-wider mb-4">Fonts</h3>
+      <div className="space-y-4">
         {fields.map((f, i) => (
           <motion.div
             key={f.key}
-            style={styles.field}
+            className="flex flex-col gap-1.5"
             initial={{ opacity: 0, x: -6 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: i * 0.08, duration: 0.3 }}
           >
-            <label style={styles.label}>{f.label}</label>
+            <label className="text-[11px] font-semibold text-text-muted uppercase tracking-wider">{f.label}</label>
             <select
-              style={styles.select}
+              className="h-10 px-3.5 pr-8 text-sm bg-bg-surface border border-border rounded-xl text-text-primary w-full appearance-none cursor-pointer focus:outline-none focus:border-accent/30 focus:ring-1 focus:ring-accent/10"
+              style={{
+                backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23727272' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E")`,
+                backgroundRepeat: 'no-repeat',
+                backgroundPosition: 'right 10px center',
+                backgroundSize: '16px',
+              }}
               value={config[f.key]}
               onChange={e => set(f.key, e.target.value)}
             >
@@ -47,11 +53,3 @@ export function FontConfig({ config, onChange }: Props) {
     </div>
   );
 }
-
-const styles: Record<string, React.CSSProperties> = {
-  title: { fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.8px', color: '#999aae', marginBottom: 8 },
-  grid: { display: 'flex', flexDirection: 'column', gap: 6 },
-  field: { display: 'flex', flexDirection: 'column', gap: 2 },
-  label: { fontSize: 10, fontWeight: 600, color: '#999aae' },
-  select: { padding: '5px 8px', fontSize: 12, borderRadius: 5, border: '1px solid #2e2e3e', background: '#22222e', color: '#e4e4ec', fontFamily: 'inherit', width: '100%' },
-};

@@ -1,5 +1,4 @@
 import { useState, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
 import type { Product, LayoutConfig as LayoutConfigType, StickerData, FontConfig as FontConfigType, DesignElement } from './types';
 import { DEFAULT_LAYOUT, DEFAULT_FONTS } from './types';
 import { ProductSelector } from './components/ProductSelector';
@@ -10,6 +9,9 @@ import { Preview } from './components/Preview';
 import { StickerDesigner } from './components/StickerDesigner';
 import { generatePDF, generatePDFFromDesign } from './utils/pdf';
 import { renderDesign } from './utils/renderDesign';
+import { NavSidebar } from './components/ui/sidebar';
+import { TopToolbar } from './components/ui/toolbar';
+import { Card, CardContent } from './components/ui/card';
 
 export default function App() {
   const [tab, setTab] = useState<'generator' | 'designer'>('generator');
@@ -20,6 +22,13 @@ export default function App() {
   const [logoDataUrl, setLogoDataUrl] = useState<string | undefined>();
   const [generated, setGenerated] = useState(false);
   const [designElements, setDesignElements] = useState<DesignElement[] | null>(null);
+
+  const [navTab, setNavTab] = useState('tasks');
+  const [activeFilter, setActiveFilter] = useState('all');
+  const [activeProject] = useState('All Projects');
+  const [sortBy] = useState('newest');
+  const [viewMode] = useState<'grid' | 'list'>('list');
+  const [searchQuery, setSearchQuery] = useState('');
 
   const handleGenerate = useCallback(
     (data: { stickers: StickerData[]; product: Product; logo?: string }) => {
@@ -39,184 +48,115 @@ export default function App() {
 
   const isDesignMode = designElements !== null && designElements.length > 0;
 
+  const handleNavChange = (id: string) => {
+    setNavTab(id);
+    if (id === 'tasks') setTab('generator');
+    if (id === 'projects') setTab('designer');
+  };
+
   return (
-    <motion.div
-      style={styles.wrapper}
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 0.4 }}
-    >
-      <motion.header
-        style={styles.header}
-        initial={{ opacity: 0, y: -12 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.1, duration: 0.35 }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-          <h1 style={styles.h1}>Sticker Generator</h1>
-          <div style={styles.tabs}>
-            <button
-              style={tab === 'generator' ? styles.tabActive : styles.tab}
-              onClick={() => setTab('generator')}
-            >
-              Generator
-            </button>
-            <button
-              style={tab === 'designer' ? styles.tabActive : styles.tab}
-              onClick={() => setTab('designer')}
-            >
-              Designer
-            </button>
-          </div>
-        </div>
-        <span style={styles.tagline}>Product label batch printer</span>
-      </motion.header>
+    <div className="flex h-screen bg-bg-primary overflow-hidden">
+      <NavSidebar activeTab={navTab} onTabChange={handleNavChange} />
 
-      <div style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
-        <motion.div
-          style={{ ...styles.layout, position: 'absolute', inset: 0, display: tab === 'generator' ? 'flex' : 'none' }}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: tab === 'generator' ? 1 : 0 }}
-          transition={{ duration: 0.2 }}
-        >
-          <aside style={styles.sidebar}>
-              <motion.div
-                initial={{ opacity: 0, y: 16 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.35, ease: 'easeOut', delay: 0.15 }}
-              >
-                {isDesignMode && (
-                  <div style={{ marginBottom: 8, padding: '6px 10px', background: '#1a2a1a', border: '1px solid #2a4a2a', borderRadius: 6, fontSize: 12, color: '#22c55e' }}>
-                    Using custom design —{' '}
-                    <button
-                      onClick={() => setDesignElements(null)}
-                      style={{ background: 'none', border: 'none', color: '#7c5cfc', cursor: 'pointer', fontSize: 12, textDecoration: 'underline', fontFamily: 'inherit', padding: 0 }}
-                    >
-                      clear
-                    </button>
-                  </div>
-                )}
-                <ProductSelector
-                  product={product}
-                  onProductChange={setProduct}
-                  onLogoData={setLogoDataUrl}
-                />
-              </motion.div>
+      <div className="flex-1 flex flex-col overflow-hidden min-w-0">
+        <TopToolbar
+          activeFilter={activeFilter}
+          onFilterChange={setActiveFilter}
+          activeProject={activeProject}
+          onProjectChange={() => {}}
+          sortBy={sortBy}
+          onSortChange={() => {}}
+          viewMode={viewMode}
+          onViewModeChange={() => {}}
+          onCreateTask={() => {}}
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
+        />
 
-              <motion.div
-                initial={{ opacity: 0, y: 16 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.35, ease: 'easeOut', delay: 0.25 }}
-              >
-                <BatchConfig
-                  product={product}
-                  layout={layout}
-                  onGenerate={handleGenerate}
-                  disabled={!product}
-                />
-              </motion.div>
+        <div className="flex-1 relative overflow-hidden">
+          {/* Generator View */}
+          <div
+            className="absolute inset-0 flex"
+            style={{ display: tab === 'generator' ? 'flex' : 'none' }}
+          >
+            {/* Sidebar panels */}
+            <aside className="w-[340px] min-w-[340px] bg-bg-sidebar border-r border-border overflow-y-auto p-5 space-y-5">
+              {isDesignMode && (
+                <div className="flex items-center gap-2 px-4 py-2.5 bg-success/10 border border-success/20 rounded-xl text-sm text-success">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
+                    <path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z" />
+                    <path d="m9 12 2 2 4-4" />
+                  </svg>
+                  <span className="flex-1 text-sm">Using custom design</span>
+                  <button
+                    onClick={() => setDesignElements(null)}
+                    className="text-xs font-medium text-text-muted hover:text-text-primary underline transition-colors"
+                  >
+                    clear
+                  </button>
+                </div>
+              )}
 
-              <motion.div
-                initial={{ opacity: 0, y: 16 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.35, ease: 'easeOut', delay: 0.35 }}
-              >
-                <FontConfig config={fonts} onChange={setFonts} />
-              </motion.div>
+              <Card>
+                <CardContent className="p-0">
+                  <ProductSelector
+                    product={product}
+                    onProductChange={setProduct}
+                    onLogoData={setLogoDataUrl}
+                  />
+                </CardContent>
+              </Card>
 
-              <motion.div
-                initial={{ opacity: 0, y: 16 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.35, ease: 'easeOut', delay: 0.45 }}
-              >
-                <LayoutConfig layout={layout} onChange={setLayout} />
-              </motion.div>
+              <Card>
+                <CardContent className="p-0">
+                  <BatchConfig
+                    product={product}
+                    layout={layout}
+                    onGenerate={handleGenerate}
+                    disabled={!product}
+                  />
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardContent className="p-0">
+                  <FontConfig config={fonts} onChange={setFonts} />
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardContent className="p-0">
+                  <LayoutConfig layout={layout} onChange={setLayout} />
+                </CardContent>
+              </Card>
             </aside>
 
-            <main style={styles.main}>
-              <AnimatePresence mode="wait">
-                <Preview
-                  key={generated && isDesignMode ? 'design-preview' : generated ? 'preview' : 'empty'}
-                  stickers={stickers}
-                  product={product}
-                  layout={layout}
-                  fonts={fonts}
-                  logoDataUrl={logoDataUrl}
-                  visible={generated}
-                  designElements={isDesignMode ? designElements : undefined}
-                  generatePDFOverride={isDesignMode ? generatePDFFromDesign : undefined}
-                  renderStickerOverride={isDesignMode ? renderDesign : undefined}
-                />
-              </AnimatePresence>
+            {/* Preview */}
+            <main className="flex-1 min-w-0 overflow-hidden">
+              <Preview
+                key={generated && isDesignMode ? 'design-preview' : generated ? 'preview' : 'empty'}
+                stickers={stickers}
+                product={product}
+                layout={layout}
+                fonts={fonts}
+                logoDataUrl={logoDataUrl}
+                visible={generated}
+                designElements={isDesignMode ? designElements : undefined}
+                generatePDFOverride={isDesignMode ? generatePDFFromDesign : undefined}
+                renderStickerOverride={isDesignMode ? renderDesign : undefined}
+              />
             </main>
-          </motion.div>
+          </div>
 
-          <motion.div
-            style={{ display: 'flex', flex: 1, overflow: 'hidden', position: 'absolute', inset: 0, }}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: tab === 'designer' ? 1 : 0 }}
-            transition={{ duration: 0.2 }}
+          {/* Designer View */}
+          <div
+            className="absolute inset-0"
+            style={{ display: tab === 'designer' ? 'flex' : 'none' }}
           >
             <StickerDesigner onUseDesign={handleUseDesign} />
-          </motion.div>
+          </div>
         </div>
-    </motion.div>
+      </div>
+    </div>
   );
 }
-
-const styles: Record<string, React.CSSProperties> = {
-  wrapper: {
-    display: 'flex',
-    flexDirection: 'column',
-    height: '100vh',
-    background: '#0f0f13',
-    color: '#e4e4ec',
-    fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
-    fontSize: 14,
-    overflow: 'hidden',
-  },
-  header: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: '12px 24px',
-    background: '#191922',
-    borderBottom: '1px solid #2e2e3e',
-    flexShrink: 0,
-  },
-  h1: {
-    fontSize: 18,
-    fontWeight: 700,
-    letterSpacing: '-0.5px',
-    background: 'linear-gradient(135deg, #fff 30%, #7c5cfc)',
-    WebkitBackgroundClip: 'text',
-    WebkitTextFillColor: 'transparent',
-    margin: 0,
-  },
-  tagline: { fontSize: 12, color: '#999aae' },
-  tabs: { display: 'flex', gap: 2, background: '#14141e', borderRadius: 6, padding: 2 },
-  tab: { padding: '5px 14px', background: 'transparent', border: 'none', borderRadius: 4, color: '#999aae', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' },
-  tabActive: { padding: '5px 14px', background: '#2e2e3e', border: 'none', borderRadius: 4, color: '#e4e4ec', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' },
-  layout: {
-    display: 'flex',
-    flex: 1,
-    overflow: 'hidden',
-  },
-  sidebar: {
-    width: 340,
-    minWidth: 340,
-    background: '#191922',
-    padding: 20,
-    display: 'flex',
-    flexDirection: 'column',
-    gap: 18,
-    overflowY: 'auto',
-    borderRight: '1px solid #2e2e3e',
-  },
-  main: {
-    flex: 1,
-    display: 'flex',
-    flexDirection: 'column',
-    overflow: 'hidden',
-  },
-};

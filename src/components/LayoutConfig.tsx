@@ -28,19 +28,19 @@ export function LayoutConfig({ layout, onChange }: Props) {
 
   return (
     <div>
-      <h3 style={styles.title}>Layout</h3>
-      <div style={styles.grid}>
+      <h3 className="text-[11px] font-semibold text-text-muted uppercase tracking-wider mb-2">Layout</h3>
+      <div className="grid grid-cols-2 gap-x-2.5 gap-y-1.5">
         {fields.map((f, i) => (
           <motion.div
             key={f.key}
-            style={styles.field}
+            className="flex flex-col gap-0.5"
             initial={{ opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.03, duration: 0.3 }}
           >
-            <label style={styles.label}>{f.label}</label>
+            <label className="text-[11px] font-semibold text-text-muted uppercase tracking-wider">{f.label}</label>
             <input
-              style={styles.input}
+              className="h-10 px-3.5 text-sm bg-bg-surface border border-border rounded-xl text-text-primary focus:outline-none focus:border-accent/30 focus:ring-1 focus:ring-accent/10 w-full"
               type="number"
               min={f.min}
               max={f.max}
@@ -54,11 +54,3 @@ export function LayoutConfig({ layout, onChange }: Props) {
     </div>
   );
 }
-
-const styles: Record<string, React.CSSProperties> = {
-  title: { fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.8px', color: '#999aae', marginBottom: 8 },
-  grid: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px 10px' },
-  field: { display: 'flex', flexDirection: 'column', gap: 2 },
-  label: { fontSize: 10, fontWeight: 600, color: '#999aae' },
-  input: { padding: '5px 8px', fontSize: 12, borderRadius: 5, border: '1px solid #2e2e3e', background: '#22222e', color: '#e4e4ec', fontFamily: 'inherit', width: '100%' },
-};

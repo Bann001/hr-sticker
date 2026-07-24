@@ -85,13 +85,13 @@ export function BatchConfig({ product, layout, onGenerate, disabled }: Props) {
   }
 
   return (
-    <div>
-      <h3 style={styles.title}>Batch</h3>
+    <div className="p-5 space-y-4">
+      <h3 className="text-[11px] font-semibold uppercase tracking-wider text-text-muted mb-2">Batch</h3>
 
       <motion.div {...fieldProps} transition={{ delay: 0.05 }}>
-        <label style={styles.label}>Batch code (YYMM)</label>
+        <label className="text-[11px] font-semibold text-text-muted uppercase tracking-wider">Batch code (YYMM)</label>
         <input
-          style={styles.input}
+          className="h-10 px-3.5 text-sm bg-bg-surface border border-border rounded-xl text-text-primary w-full focus:outline-none focus:border-accent/30 focus:ring-1 focus:ring-accent/10 placeholder:text-text-muted/60"
           value={batchCode}
           onChange={e => setBatchCode(e.target.value.replace(/\D/g, '').slice(0, 4))}
           placeholder="2612"
@@ -100,9 +100,9 @@ export function BatchConfig({ product, layout, onGenerate, disabled }: Props) {
       </motion.div>
 
       <motion.div {...fieldProps} transition={{ delay: 0.1 }}>
-        <label style={styles.label}>Batch number (2 digits)</label>
+        <label className="text-[11px] font-semibold text-text-muted uppercase tracking-wider">Batch number (2 digits)</label>
         <input
-          style={styles.input}
+          className="h-10 px-3.5 text-sm bg-bg-surface border border-border rounded-xl text-text-primary w-full focus:outline-none focus:border-accent/30 focus:ring-1 focus:ring-accent/10 placeholder:text-text-muted/60"
           value={batchNum}
           onChange={e => setBatchNum(e.target.value.replace(/\D/g, '').slice(0, 2))}
           placeholder="01"
@@ -111,9 +111,9 @@ export function BatchConfig({ product, layout, onGenerate, disabled }: Props) {
       </motion.div>
 
       <motion.div {...fieldProps} transition={{ delay: 0.15 }}>
-        <label style={styles.label}>Start serial</label>
+        <label className="text-[11px] font-semibold text-text-muted uppercase tracking-wider">Start serial</label>
         <input
-          style={styles.input}
+          className="h-10 px-3.5 text-sm bg-bg-surface border border-border rounded-xl text-text-primary w-full focus:outline-none focus:border-accent/30 focus:ring-1 focus:ring-accent/10 placeholder:text-text-muted/60"
           type="number"
           min={1}
           value={startSerial}
@@ -122,9 +122,9 @@ export function BatchConfig({ product, layout, onGenerate, disabled }: Props) {
       </motion.div>
 
       <motion.div {...fieldProps} transition={{ delay: 0.2 }}>
-        <label style={styles.label}>Quantity</label>
+        <label className="text-[11px] font-semibold text-text-muted uppercase tracking-wider">Quantity</label>
         <input
-          style={styles.input}
+          className="h-10 px-3.5 text-sm bg-bg-surface border border-border rounded-xl text-text-primary w-full focus:outline-none focus:border-accent/30 focus:ring-1 focus:ring-accent/10 placeholder:text-text-muted/60"
           type="number"
           min={1}
           max={10000}
@@ -133,9 +133,9 @@ export function BatchConfig({ product, layout, onGenerate, disabled }: Props) {
         />
       </motion.div>
 
-      <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+      <div className="flex gap-2 mt-2">
         <motion.button
-          style={styles.previewBtn}
+          className="flex-1 bg-bg-surface border border-border rounded-xl text-text-primary font-semibold text-sm h-10 hover:bg-bg-sidebar transition-all duration-150 disabled:opacity-40 disabled:pointer-events-none"
           onClick={handlePreview}
           disabled={disabled}
           whileHover={disabled ? {} : { scale: 1.03 }}
@@ -144,7 +144,7 @@ export function BatchConfig({ product, layout, onGenerate, disabled }: Props) {
           Preview
         </motion.button>
         <motion.button
-          style={styles.genBtn}
+          className="flex-1 bg-accent text-selected-text hover:bg-accent-hover rounded-xl font-semibold px-5 py-2.5 text-sm transition-all duration-150 disabled:opacity-40 disabled:pointer-events-none"
           onClick={handleGenerate}
           disabled={disabled || generating}
           whileHover={disabled || generating ? {} : { scale: 1.03 }}
@@ -156,11 +156,3 @@ export function BatchConfig({ product, layout, onGenerate, disabled }: Props) {
     </div>
   );
 }
-
-const styles: Record<string, React.CSSProperties> = {
-  title: { fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.8px', color: '#999aae', marginBottom: 8 },
-  label: { fontSize: 11, fontWeight: 600, color: '#999aae', marginTop: 4 },
-  input: { width: '100%', padding: '7px 10px', fontSize: 13, borderRadius: 6, border: '1px solid #2e2e3e', background: '#22222e', color: '#e4e4ec', fontFamily: 'inherit', marginTop: 2 },
-  previewBtn: { flex: 1, padding: '9px 0', background: '#2a2a38', color: '#e4e4ec', border: '1px solid #2e2e3e', borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' },
-  genBtn: { flex: 1, padding: '9px 0', background: '#7c5cfc', color: '#fff', border: 'none', borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' },
-};

@@ -57,7 +57,7 @@ export function SavedLogos({ onSelect }: Props) {
   return (
     <>
       <motion.button
-        style={styles.folderBtn}
+        className="text-text-secondary hover:text-text-primary text-xs font-medium p-1.5 inline-flex items-center justify-center leading-none"
         onClick={() => setOpen(true)}
         title="Saved logos"
         whileHover={{ scale: 1.08 }}
@@ -71,7 +71,7 @@ export function SavedLogos({ onSelect }: Props) {
       <AnimatePresence>
         {open && (
           <motion.div
-            style={styles.overlay}
+            className="fixed inset-0 bg-black/60 flex items-center justify-center z-50"
             onClick={() => setOpen(false)}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -79,17 +79,17 @@ export function SavedLogos({ onSelect }: Props) {
             transition={{ duration: 0.2 }}
           >
             <motion.div
-              style={styles.panel}
+              className="bg-bg-surface border border-border rounded-2xl p-6 max-w-md w-full mx-4 max-h-[80vh] overflow-y-auto shadow-2xl"
               onClick={e => e.stopPropagation()}
               initial={{ opacity: 0, scale: 0.92, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.92, y: 20 }}
               transition={{ type: 'spring', damping: 25, stiffness: 300 }}
             >
-              <div style={styles.panelHeader}>
-                <h3 style={styles.panelTitle}>Saved Logos</h3>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-base font-semibold text-text-primary">Saved Logos</h3>
                 <motion.button
-                  style={styles.closeBtn}
+                  className="text-text-muted hover:text-text-primary transition-colors"
                   onClick={() => setOpen(false)}
                   whileHover={{ rotate: 90 }}
                   transition={{ duration: 0.2 }}
@@ -98,14 +98,14 @@ export function SavedLogos({ onSelect }: Props) {
                 </motion.button>
               </div>
 
-              <div style={styles.grid}>
+              <div className="grid grid-cols-2 gap-2">
                 {logos.length === 0 && (
-                  <p style={styles.empty}>No saved logos yet. Upload a logo and save a product to add one.</p>
+                  <p className="col-span-2 text-center text-sm text-text-muted py-8">No saved logos yet. Upload a logo and save a product to add one.</p>
                 )}
                 {logos.map((logo, i) => (
                   <motion.div
                     key={logo.id}
-                    style={styles.card}
+                    className="flex items-center justify-between p-3 bg-bg-primary border border-border rounded-xl gap-3"
                     initial={{ opacity: 0, y: 12 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: i * 0.05, duration: 0.25 }}
@@ -114,23 +114,21 @@ export function SavedLogos({ onSelect }: Props) {
                     <motion.img
                       src={logo.dataUrl}
                       alt={logo.name}
-                      style={styles.thumb}
+                      className="w-12 h-12 rounded-lg object-cover bg-bg-surface cursor-pointer shrink-0"
                       onClick={() => { onSelect(logo.dataUrl); setOpen(false); }}
                       whileHover={{ scale: 1.05 }}
                       transition={{ duration: 0.2 }}
                     />
-                    <div style={styles.cardBody}>
-                      <span style={styles.cardName}>{logo.name}</span>
-                      <motion.button
-                        style={styles.delBtn}
-                        onClick={() => handleDelete(logo.id)}
-                        title="Delete"
-                        whileHover={{ scale: 1.3, color: '#ef4444' }}
-                        transition={{ duration: 0.15 }}
-                      >
-                        &#x1F5D1;
-                      </motion.button>
-                    </div>
+                    <span className="flex-1 min-w-0 text-sm font-medium text-text-primary truncate">{logo.name}</span>
+                    <motion.button
+                      className="text-danger/70 hover:text-danger text-xs font-medium shrink-0"
+                      onClick={() => handleDelete(logo.id)}
+                      title="Delete"
+                      whileHover={{ scale: 1.3, color: '#ef4444' }}
+                      transition={{ duration: 0.15 }}
+                    >
+                      &#x1F5D1;
+                    </motion.button>
                   </motion.div>
                 ))}
               </div>
@@ -141,47 +139,3 @@ export function SavedLogos({ onSelect }: Props) {
     </>
   );
 }
-
-const styles: Record<string, React.CSSProperties> = {
-  folderBtn: {
-    background: '#22222e',
-    border: '1px solid #2e2e3e',
-    borderRadius: 6,
-    color: '#999aae',
-    cursor: 'pointer',
-    padding: '5px 8px',
-    display: 'inline-flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    lineHeight: 0,
-  },
-  overlay: {
-    position: 'fixed', inset: 0,
-    background: 'rgba(0,0,0,0.6)',
-    display: 'flex', alignItems: 'center', justifyContent: 'center',
-    zIndex: 1000,
-  },
-  panel: {
-    background: '#191922', border: '1px solid #2e2e3e', borderRadius: 10,
-    width: 420, maxWidth: '90vw', maxHeight: '80vh',
-    display: 'flex', flexDirection: 'column', padding: 20, gap: 12,
-  },
-  panelHeader: { display: 'flex', alignItems: 'center', justifyContent: 'space-between' },
-  panelTitle: { fontSize: 14, fontWeight: 700, color: '#e4e4ec', margin: 0 },
-  closeBtn: { background: 'none', border: 'none', color: '#999aae', fontSize: 16, cursor: 'pointer', padding: '2px 6px' },
-  grid: {
-    display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8,
-    overflowY: 'auto', maxHeight: 300,
-  },
-  empty: { color: '#666', fontSize: 12, gridColumn: '1 / -1', textAlign: 'center', padding: 20 },
-  card: { background: '#14141e', borderRadius: 6, overflow: 'hidden', border: '1px solid #2e2e3e' },
-  thumb: {
-    width: '100%', height: 80, objectFit: 'contain',
-    background: '#fff', cursor: 'pointer', display: 'block',
-  },
-  cardBody: {
-    display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 8px',
-  },
-  cardName: { fontSize: 11, color: '#999aae', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 },
-  delBtn: { background: 'none', border: 'none', color: '#666', cursor: 'pointer', fontSize: 12, padding: 0 },
-};

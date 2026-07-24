@@ -75,8 +75,8 @@ export function ProductSelector({ product, onProductChange, onLogoData }: Props)
   }
 
   return (
-    <div>
-      <h3 style={styles.title}>Product</h3>
+    <div className="p-5 space-y-4">
+      <h3 className="text-[11px] font-semibold text-text-muted uppercase tracking-wider">Product</h3>
 
       <AnimatePresence mode="wait">
         {!editing && products.length > 0 && (
@@ -86,10 +86,10 @@ export function ProductSelector({ product, onProductChange, onLogoData }: Props)
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
             transition={{ duration: 0.25, ease: 'easeInOut' }}
-            style={{ overflow: 'hidden' }}
+            className="overflow-hidden"
           >
             <select
-              style={styles.select}
+              className="w-full h-10 px-3.5 pr-8 text-sm bg-bg-surface border border-border rounded-xl text-text-primary appearance-none cursor-pointer focus:outline-none"
               value={product?.id || ''}
               onChange={e => {
                 const p = products.find(x => x.id === e.target.value);
@@ -112,7 +112,7 @@ export function ProductSelector({ product, onProductChange, onLogoData }: Props)
       </AnimatePresence>
 
       <motion.button
-        style={styles.linkBtn}
+        className="text-text-secondary hover:text-text-primary text-xs font-medium bg-transparent border-none cursor-pointer"
         onClick={() => setEditing(!editing)}
         whileHover={{ scale: 1.04 }}
         whileTap={{ scale: 0.96 }}
@@ -124,32 +124,32 @@ export function ProductSelector({ product, onProductChange, onLogoData }: Props)
         {editing && (
           <motion.div
             key="form"
-            style={styles.form}
+            className="flex flex-col gap-3 overflow-hidden"
             initial={{ opacity: 0, y: -8, height: 0 }}
             animate={{ opacity: 1, y: 0, height: 'auto' }}
             exit={{ opacity: 0, y: -8, height: 0 }}
             transition={{ duration: 0.3, ease: 'easeInOut' }}
           >
-            <label style={styles.label}>Name</label>
-            <input style={styles.input} value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Vaniva" />
+            <label className="text-[11px] font-semibold text-text-muted uppercase tracking-wider">Name</label>
+            <input className="h-10 px-3.5 text-sm bg-bg-surface border border-border rounded-xl text-text-primary focus:outline-none focus:border-accent/30 focus:ring-1 focus:ring-accent/10" value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Vaniva" />
 
-            <label style={styles.label}>Distributor</label>
-            <input style={styles.input} value={distributor} onChange={e => setDistributor(e.target.value)} placeholder="Distributor name" />
+            <label className="text-[11px] font-semibold text-text-muted uppercase tracking-wider">Distributor</label>
+            <input className="h-10 px-3.5 text-sm bg-bg-surface border border-border rounded-xl text-text-primary focus:outline-none focus:border-accent/30 focus:ring-1 focus:ring-accent/10" value={distributor} onChange={e => setDistributor(e.target.value)} placeholder="Distributor name" />
 
-            <label style={styles.label}>Volume</label>
-            <input style={styles.input} value={volume} onChange={e => setVolume(e.target.value)} placeholder="e.g. 500ml" />
+            <label className="text-[11px] font-semibold text-text-muted uppercase tracking-wider">Volume</label>
+            <input className="h-10 px-3.5 text-sm bg-bg-surface border border-border rounded-xl text-text-primary focus:outline-none focus:border-accent/30 focus:ring-1 focus:ring-accent/10" value={volume} onChange={e => setVolume(e.target.value)} placeholder="e.g. 500ml" />
 
-            <label style={styles.label}>Logo URL</label>
-            <input style={styles.input} value={logoUrl} onChange={e => loadLogo(e.target.value)} placeholder="https://..." />
+            <label className="text-[11px] font-semibold text-text-muted uppercase tracking-wider">Logo URL</label>
+            <input className="h-10 px-3.5 text-sm bg-bg-surface border border-border rounded-xl text-text-primary focus:outline-none focus:border-accent/30 focus:ring-1 focus:ring-accent/10" value={logoUrl} onChange={e => loadLogo(e.target.value)} placeholder="https://..." />
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <label style={styles.label}>Or upload</label>
+            <div className="flex items-center gap-2">
+              <label className="text-[11px] font-semibold text-text-muted uppercase tracking-wider">Or upload</label>
               <SavedLogos onSelect={url => { onLogoData(url); setLogoUrl(url); }} />
             </div>
-            <input ref={fileRef} type="file" accept="image/*" onChange={handleFile} style={{ color: '#aaa', fontSize: 12 }} />
+            <input ref={fileRef} type="file" accept="image/*" onChange={handleFile} className="text-xs text-text-muted" />
 
             <motion.button
-              style={styles.saveBtn}
+              className="bg-accent text-selected-text hover:bg-accent-hover rounded-xl font-medium px-4 py-2.5 text-sm"
               onClick={handleSave}
               disabled={loading}
               whileHover={{ scale: 1.03 }}
@@ -165,7 +165,7 @@ export function ProductSelector({ product, onProductChange, onLogoData }: Props)
         {product && (
           <motion.div
             key="active"
-            style={styles.activeProduct}
+            className="text-xs text-accent"
             initial={{ opacity: 0, x: -8 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -8 }}
@@ -177,14 +177,3 @@ export function ProductSelector({ product, onProductChange, onLogoData }: Props)
     </div>
   );
 }
-
-const styles: Record<string, React.CSSProperties> = {
-  title: { fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.8px', color: '#999aae', marginBottom: 8 },
-  select: { width: '100%', padding: '8px 10px', fontSize: 13, borderRadius: 6, border: '1px solid #2e2e3e', background: '#22222e', color: '#e4e4ec', fontFamily: 'inherit' },
-  linkBtn: { background: 'none', border: 'none', color: '#7c5cfc', cursor: 'pointer', fontSize: 12, padding: '4px 0', fontFamily: 'inherit' },
-  form: { display: 'flex', flexDirection: 'column', gap: 4, marginTop: 6, overflow: 'hidden' },
-  label: { fontSize: 11, fontWeight: 600, color: '#999aae' },
-  input: { padding: '7px 10px', fontSize: 13, borderRadius: 6, border: '1px solid #2e2e3e', background: '#22222e', color: '#e4e4ec', fontFamily: 'inherit' },
-  saveBtn: { padding: '8px 14px', background: '#7c5cfc', color: '#fff', border: 'none', borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: 'pointer', marginTop: 4, fontFamily: 'inherit' },
-  activeProduct: { fontSize: 12, color: '#22c55e', marginTop: 4 },
-};

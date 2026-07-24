@@ -221,36 +221,36 @@ export function StickerDesigner({ onUseDesign }: Props) {
 
   return (
     <motion.div
-      style={styles.container}
+      className="flex flex-col flex-1 overflow-hidden"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.3 }}
     >
       {/* Toolbar */}
-      <div style={styles.toolbar}>
+      <div className="flex items-center gap-2 px-4 py-3 bg-bg-sidebar border-b border-border shrink-0">
         <input
-          style={styles.nameInput}
+          className="flex-1 h-9 px-3.5 text-sm bg-bg-surface border border-border rounded-xl text-text-primary placeholder:text-text-muted/60 focus:outline-none focus:border-accent/30 focus:ring-1 focus:ring-accent/10 max-w-[200px]"
           value={designName}
           onChange={e => setDesignName(e.target.value)}
           placeholder="Design name"
         />
-        <motion.button style={styles.btn} onClick={saveDesign} whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}>Save</motion.button>
-        <motion.button style={styles.btn} onClick={() => { setShowLibrary(!showLibrary); if (!showLibrary) setSavedDesigns(loadDesigns()); }} whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}>
+        <motion.button className="h-9 px-4 rounded-xl text-xs font-semibold transition-all duration-150 cursor-pointer bg-accent text-selected-text hover:bg-accent-hover border-none" onClick={saveDesign} whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}>Save</motion.button>
+        <motion.button className="h-9 px-4 bg-bg-surface text-text-secondary border border-border rounded-xl text-xs font-semibold hover:bg-border hover:text-text-primary transition-all duration-150 cursor-pointer" onClick={() => { setShowLibrary(!showLibrary); if (!showLibrary) setSavedDesigns(loadDesigns()); }} whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}>
           Library ({savedDesigns.length})
         </motion.button>
-        <motion.button style={{ ...styles.btn, background: '#16a34a', color: '#fff' }} onClick={useDesign} disabled={elements.length === 0} whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}>
+        <motion.button className="h-9 px-4 rounded-xl text-xs font-semibold transition-all duration-150 cursor-pointer bg-success text-white hover:opacity-90 border-none disabled:opacity-50 disabled:cursor-not-allowed" onClick={useDesign} disabled={elements.length === 0} whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}>
           Use Design
         </motion.button>
       </div>
 
-      <div style={styles.body}>
+      <div className="flex flex-1 overflow-hidden">
         {/* Palette */}
-        <div style={styles.palette}>
-          <h4 style={styles.paletteTitle}>Elements</h4>
+        <div className="w-[220px] min-w-[220px] bg-bg-sidebar border-r border-border overflow-y-auto p-4">
+          <h4 className="text-[11px] font-semibold text-text-muted uppercase tracking-wider mb-3">Elements</h4>
           {(['brand', 'distributor', 'volume', 'bt', 'custom'] as ElementType[]).map(type => (
             <motion.button
               key={type}
-              style={styles.paletteBtn}
+              className="w-full text-left px-3 py-2.5 bg-bg-surface text-text-secondary border border-border rounded-xl text-sm hover:bg-border hover:text-text-primary transition-all duration-150 cursor-pointer mb-1.5 font-medium"
               onClick={() => addElement(type)}
               whileHover={{ scale: 1.04, x: 2 }}
               whileTap={{ scale: 0.96 }}
@@ -258,62 +258,62 @@ export function StickerDesigner({ onUseDesign }: Props) {
               + {ELEMENT_LABELS[type]}
             </motion.button>
           ))}
-          <div style={{ marginTop: 6, display: 'flex', gap: 6, alignItems: 'center' }}>
+          <div className="mt-1.5 flex gap-1.5 items-center">
             <input
               type="file"
               accept="image/*"
               onChange={handleLogoFile}
-              style={{ display: 'none' }}
+              className="hidden"
               id="designer-logo-upload"
             />
-            <label htmlFor="designer-logo-upload" style={styles.paletteBtn as any}>+ Logo</label>
+            <label htmlFor="designer-logo-upload" className="w-full text-left px-3 py-2.5 bg-bg-surface text-text-secondary border border-border rounded-xl text-sm hover:bg-border hover:text-text-primary transition-all duration-150 cursor-pointer mb-1.5 font-medium">+ Logo</label>
             <SavedLogos onSelect={url => { setLogoDataUrl(url); setLogoPreview(url); if (!elements.some(el => el.type === 'logo')) addElement('logo'); }} />
           </div>
 
           {sel && (
-            <div style={styles.properties}>
-                <h4 style={{ ...styles.paletteTitle, marginTop: 12 }}>Properties</h4>
+            <div className="space-y-3 overflow-hidden">
+                <h4 className="text-[11px] font-semibold text-text-muted uppercase tracking-wider mb-3 mt-3">Properties</h4>
 
                 {sel.type !== 'logo' && (
                   <>
-                    <label style={styles.propLabel}>Preview text</label>
-                    <input style={styles.propInput} value={sel.content || ''} onChange={e => updateElement(sel.id, { content: e.target.value })} placeholder={sel.type === 'brand' ? 'Brand Name' : sel.type === 'distributor' ? 'Distributed by: Name' : sel.type === 'volume' ? '500ml' : sel.type === 'bt' ? 'BT: 00000' : 'Custom text'} />
+                    <label className="text-[11px] font-semibold text-text-muted uppercase tracking-wider">Preview text</label>
+                    <input className="w-full h-9 px-3 text-sm bg-bg-surface border border-border rounded-xl text-text-primary focus:outline-none focus:border-accent/30" value={sel.content || ''} onChange={e => updateElement(sel.id, { content: e.target.value })} placeholder={sel.type === 'brand' ? 'Brand Name' : sel.type === 'distributor' ? 'Distributed by: Name' : sel.type === 'volume' ? '500ml' : sel.type === 'bt' ? 'BT: 00000' : 'Custom text'} />
                   </>
                 )}
 
-                <label style={styles.propLabel}>Font</label>
-                <select style={styles.propSelect} value={sel.fontFamily} onChange={e => updateElement(sel.id, { fontFamily: e.target.value as FontFamily })}>
+                <label className="text-[11px] font-semibold text-text-muted uppercase tracking-wider">Font</label>
+                <select className="w-full h-9 px-3 pr-8 text-sm bg-bg-surface border border-border rounded-xl text-text-primary appearance-none cursor-pointer" value={sel.fontFamily} onChange={e => updateElement(sel.id, { fontFamily: e.target.value as FontFamily })}>
                   {['Carbona', 'Space Grotesk', 'Space Mono'].map(f => (
                     <option key={f} value={f}>{f}</option>
                   ))}
                 </select>
 
-                <label style={styles.propLabel}>Font Size</label>
-                <input style={styles.propInput} type="number" min={4} max={72} value={sel.fontSize} onChange={e => updateElement(sel.id, { fontSize: parseFloat(e.target.value) || 10 })} />
+                <label className="text-[11px] font-semibold text-text-muted uppercase tracking-wider">Font Size</label>
+                <input className="w-full h-9 px-3 text-sm bg-bg-surface border border-border rounded-xl text-text-primary focus:outline-none focus:border-accent/30" type="number" min={4} max={72} value={sel.fontSize} onChange={e => updateElement(sel.id, { fontSize: parseFloat(e.target.value) || 10 })} />
 
-                <label style={styles.propLabel}>Width</label>
-                <input style={styles.propInput} type="number" min={5} max={STICKER_W} value={Math.round(sel.widthMm)} onChange={e => { const w = parseFloat(e.target.value); if (w >= 5) updateElement(sel.id, { widthMm: w }); }} />
+                <label className="text-[11px] font-semibold text-text-muted uppercase tracking-wider">Width</label>
+                <input className="w-full h-9 px-3 text-sm bg-bg-surface border border-border rounded-xl text-text-primary focus:outline-none focus:border-accent/30" type="number" min={5} max={STICKER_W} value={Math.round(sel.widthMm)} onChange={e => { const w = parseFloat(e.target.value); if (w >= 5) updateElement(sel.id, { widthMm: w }); }} />
 
-                <label style={styles.propLabel}>Height</label>
-                <input style={styles.propInput} type="number" min={5} max={STICKER_H} value={Math.round(sel.heightMm)} onChange={e => { const h = parseFloat(e.target.value); if (h >= 5) updateElement(sel.id, { heightMm: h }); }} />
+                <label className="text-[11px] font-semibold text-text-muted uppercase tracking-wider">Height</label>
+                <input className="w-full h-9 px-3 text-sm bg-bg-surface border border-border rounded-xl text-text-primary focus:outline-none focus:border-accent/30" type="number" min={5} max={STICKER_H} value={Math.round(sel.heightMm)} onChange={e => { const h = parseFloat(e.target.value); if (h >= 5) updateElement(sel.id, { heightMm: h }); }} />
 
-                <label style={styles.propLabel}>Color</label>
-                <input style={styles.propInput} type="color" value={sel.color} onChange={e => updateElement(sel.id, { color: e.target.value })} />
+                <label className="text-[11px] font-semibold text-text-muted uppercase tracking-wider">Color</label>
+                <input className="w-full h-9 px-3 text-sm bg-bg-surface border border-border rounded-xl text-text-primary focus:outline-none focus:border-accent/30" type="color" value={sel.color} onChange={e => updateElement(sel.id, { color: e.target.value })} />
 
-                <label style={styles.propLabel}>Align</label>
-                <select style={styles.propSelect} value={sel.align} onChange={e => updateElement(sel.id, { align: e.target.value as CanvasTextAlign })}>
+                <label className="text-[11px] font-semibold text-text-muted uppercase tracking-wider">Align</label>
+                <select className="w-full h-9 px-3 pr-8 text-sm bg-bg-surface border border-border rounded-xl text-text-primary appearance-none cursor-pointer" value={sel.align} onChange={e => updateElement(sel.id, { align: e.target.value as CanvasTextAlign })}>
                   <option value="left">Left</option>
                   <option value="center">Center</option>
                   <option value="right">Right</option>
                 </select>
 
-                <label style={{ ...styles.propLabel, display: 'flex', alignItems: 'center', gap: 6 }}>
+                <label className="text-[11px] font-semibold text-text-muted uppercase tracking-wider flex items-center gap-1.5 cursor-pointer">
                   <input type="checkbox" checked={sel.bold} onChange={e => updateElement(sel.id, { bold: e.target.checked })} />
                   Bold
                 </label>
 
                 <motion.button
-                  style={{ ...styles.paletteBtn, marginTop: 8, background: '#3a1a1a', color: '#ef4444', border: '1px solid #5a2a2a' }}
+                  className="w-full text-left px-3 py-2.5 text-sm rounded-xl mb-1.5 font-medium transition-all duration-150 cursor-pointer mt-2 bg-danger/10 text-danger border border-danger/20 hover:bg-danger/20"
                   onClick={() => removeElement(sel.id)}
                   whileHover={{ scale: 1.04 }}
                   whileTap={{ scale: 0.96 }}
@@ -325,11 +325,11 @@ export function StickerDesigner({ onUseDesign }: Props) {
         </div>
 
         {/* Canvas */}
-        <div style={styles.canvasArea}>
+        <div className="flex-1 flex justify-center items-center bg-gradient-to-br from-bg-primary to-[#1a1a1a] overflow-auto p-6">
           <div
             ref={canvasRef}
+            className="shadow-[0_4px_32px_rgba(0,0,0,0.5)] rounded-xl shrink-0"
             style={{
-              ...styles.canvas,
               width: canvasW,
               height: canvasH,
               position: 'relative',
@@ -431,23 +431,23 @@ export function StickerDesigner({ onUseDesign }: Props) {
       {/* Library modal */}
       <AnimatePresence>
         {showLibrary && (
-          <motion.div style={styles.overlay} onClick={() => setShowLibrary(false)} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-            <motion.div style={styles.modal} onClick={e => e.stopPropagation()} initial={{ opacity: 0, scale: 0.92, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.92, y: 20 }} transition={{ type: 'spring', damping: 25, stiffness: 300 }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-                <h3 style={{ margin: 0, color: '#e4e4ec', fontSize: 14 }}>Saved Designs</h3>
-                <motion.button style={{ background: 'none', border: 'none', color: '#999aae', fontSize: 16, cursor: 'pointer' }} onClick={() => setShowLibrary(false)} whileHover={{ rotate: 90 }}>&#x2715;</motion.button>
+          <motion.div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50" onClick={() => setShowLibrary(false)} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+            <motion.div className="bg-bg-surface border border-border rounded-2xl p-6 w-[420px] max-w-[90vw] max-h-[80vh] overflow-y-auto shadow-2xl" onClick={e => e.stopPropagation()} initial={{ opacity: 0, scale: 0.92, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.92, y: 20 }} transition={{ type: 'spring', damping: 25, stiffness: 300 }}>
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="m-0 text-text-primary text-sm">Saved Designs</h3>
+                <motion.button className="bg-transparent border-none text-text-muted text-base cursor-pointer" onClick={() => setShowLibrary(false)} whileHover={{ rotate: 90 }}>&#x2715;</motion.button>
               </div>
-              {savedDesigns.length === 0 && <p style={{ color: '#666', fontSize: 12 }}>No saved designs yet.</p>}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {savedDesigns.length === 0 && <p className="text-text-muted text-xs">No saved designs yet.</p>}
+              <div className="flex flex-col gap-1.5">
                 {savedDesigns.map(d => (
-                  <div key={d.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#14141e', borderRadius: 6, padding: '8px 10px', border: '1px solid #2e2e3e' }}>
+                  <div key={d.id} className="flex items-center justify-between bg-bg-surface rounded-xl p-2.5 border border-border">
                     <div>
-                      <span style={{ color: '#e4e4ec', fontSize: 13 }}>{d.name}</span>
-                      <span style={{ color: '#666', fontSize: 11, marginLeft: 8 }}>{d.elements.length} elements</span>
+                      <span className="text-text-primary text-sm">{d.name}</span>
+                      <span className="text-text-muted text-xs ml-2">{d.elements.length} elements</span>
                     </div>
-                    <div style={{ display: 'flex', gap: 4 }}>
-                      <motion.button style={styles.smallBtn} onClick={() => loadDesign(d.id)} whileHover={{ scale: 1.06 }}>Load</motion.button>
-                      <motion.button style={{ ...styles.smallBtn, color: '#ef4444' }} onClick={() => deleteDesign(d.id)} whileHover={{ scale: 1.06 }}>Del</motion.button>
+                    <div className="flex gap-1">
+                      <motion.button className="h-8 px-3 bg-bg-surface text-text-secondary border border-border rounded-lg text-xs hover:bg-border hover:text-text-primary cursor-pointer" onClick={() => loadDesign(d.id)} whileHover={{ scale: 1.06 }}>Load</motion.button>
+                      <motion.button className="h-8 px-3 bg-bg-surface text-danger border border-border rounded-lg text-xs hover:bg-border cursor-pointer" onClick={() => deleteDesign(d.id)} whileHover={{ scale: 1.06 }}>Del</motion.button>
                     </div>
                   </div>
                 ))}
@@ -466,23 +466,3 @@ export { loadDesigns };
 function loadDesigns(): StickerDesign[] {
   try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); } catch { return []; }
 }
-
-const styles: Record<string, React.CSSProperties> = {
-  container: { display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' },
-  toolbar: { display: 'flex', alignItems: 'center', gap: 8, padding: '8px 16px', background: '#191922', borderBottom: '1px solid #2e2e3e', flexShrink: 0 },
-  nameInput: { flex: 1, padding: '6px 10px', fontSize: 13, borderRadius: 5, border: '1px solid #2e2e3e', background: '#22222e', color: '#e4e4ec', fontFamily: 'inherit', maxWidth: 240 },
-  btn: { padding: '6px 14px', background: '#2a2a38', color: '#e4e4ec', border: '1px solid #2e2e3e', borderRadius: 5, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' },
-  body: { display: 'flex', flex: 1, overflow: 'hidden' },
-  palette: { width: 200, minWidth: 200, padding: 12, background: '#191922', borderRight: '1px solid #2e2e3e', overflowY: 'auto' },
-  paletteTitle: { fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.8px', color: '#999aae', margin: '0 0 6px 0' },
-  paletteBtn: { display: 'block', width: '100%', padding: '6px 10px', background: '#22222e', color: '#e4e4ec', border: '1px solid #2e2e3e', borderRadius: 5, fontSize: 12, cursor: 'pointer', textAlign: 'left', marginBottom: 4, fontFamily: 'inherit' },
-  properties: { overflow: 'hidden' },
-  propLabel: { fontSize: 10, fontWeight: 600, color: '#999aae', marginTop: 4, marginBottom: 1 },
-  propInput: { width: '100%', padding: '4px 6px', fontSize: 12, borderRadius: 4, border: '1px solid #2e2e3e', background: '#22222e', color: '#e4e4ec', fontFamily: 'inherit', marginBottom: 2 },
-  propSelect: { width: '100%', padding: '4px 6px', fontSize: 12, borderRadius: 4, border: '1px solid #2e2e3e', background: '#22222e', color: '#e4e4ec', fontFamily: 'inherit', marginBottom: 2 },
-  canvasArea: { flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center', background: 'radial-gradient(ellipse at center, #14141e 0%, #0a0a0f 100%)', overflow: 'auto', padding: 20 },
-  canvas: { boxShadow: '0 4px 24px rgba(0,0,0,0.5)', borderRadius: 4, flexShrink: 0 },
-  overlay: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 },
-  modal: { background: '#191922', border: '1px solid #2e2e3e', borderRadius: 10, width: 400, maxWidth: '90vw', maxHeight: '80vh', padding: 20, overflowY: 'auto' },
-  smallBtn: { background: '#2a2a38', color: '#e4e4ec', border: '1px solid #2e2e3e', borderRadius: 4, padding: '3px 8px', fontSize: 11, cursor: 'pointer', fontFamily: 'inherit' },
-};
