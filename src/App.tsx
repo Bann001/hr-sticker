@@ -72,17 +72,14 @@ export default function App() {
         <span style={styles.tagline}>Product label batch printer</span>
       </motion.header>
 
-      <AnimatePresence mode="wait">
-        {tab === 'generator' ? (
-          <motion.div
-            key="generator"
-            style={styles.layout}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.25 }}
-          >
-            <aside style={styles.sidebar}>
+      <div style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
+        <motion.div
+          style={{ ...styles.layout, position: 'absolute', inset: 0, display: tab === 'generator' ? 'flex' : 'none' }}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: tab === 'generator' ? 1 : 0 }}
+          transition={{ duration: 0.2 }}
+        >
+          <aside style={styles.sidebar}>
               <motion.div
                 initial={{ opacity: 0, y: 16 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -153,19 +150,16 @@ export default function App() {
               </AnimatePresence>
             </main>
           </motion.div>
-        ) : (
+
           <motion.div
-            key="designer"
-            style={{ display: 'flex', flex: 1, overflow: 'hidden' }}
+            style={{ display: 'flex', flex: 1, overflow: 'hidden', position: 'absolute', inset: 0, }}
             initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.25 }}
+            animate={{ opacity: tab === 'designer' ? 1 : 0 }}
+            transition={{ duration: 0.2 }}
           >
             <StickerDesigner onUseDesign={handleUseDesign} />
           </motion.div>
-        )}
-      </AnimatePresence>
+        </div>
     </motion.div>
   );
 }

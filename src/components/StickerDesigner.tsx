@@ -208,9 +208,15 @@ export function StickerDesigner({ onUseDesign }: Props) {
   }
 
   function useDesign() {
-    const all = loadDesigns();
-    const d = all.find(x => x.name === designName);
-    if (d) onUseDesign(d);
+    if (elements.length === 0) return;
+    const design: StickerDesign = {
+      id: Date.now().toString(),
+      name: designName,
+      elements,
+      createdAt: new Date().toISOString(),
+    };
+    saveDesign();
+    onUseDesign(design);
   }
 
   return (
@@ -386,24 +392,28 @@ export function StickerDesigner({ onUseDesign }: Props) {
                 {/* Resize handles */}
                 {selectedId === el.id && (
                   <>
-                    {['nw', 'ne', 'sw', 'se'].map(h => (
-                      <div
-                        key={h}
-                        style={{
-                          position: 'absolute',
-                          width: 12, height: 12,
-                          background: '#7c5cfc',
-                          border: '2px solid #fff',
-                          borderRadius: 2,
-                          cursor: h + '-resize',
-                          ...(h.includes('n') ? { top: -6 } : { bottom: -6 }),
-                          ...(h.includes('w') ? { left: -6 } : { right: -6 }),
-                          zIndex: 10,
-                          boxShadow: '0 0 4px rgba(0,0,0,0.3)',
-                        }}
-                        onMouseDown={e => { e.stopPropagation(); handleMouseDown(e, el.id, h); }}
-                      />
-                    ))}
+                    {['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w'].map(h => {
+                      const isMid = h.length === 1;
+                      return (
+                        <div
+                          key={h}
+                          style={{
+                            position: 'absolute',
+                            width: isMid ? 8 : 12,
+                            height: isMid ? 8 : 12,
+                            background: '#7c5cfc',
+                            border: '2px solid #fff',
+                            borderRadius: isMid ? '50%' : 2,
+                            cursor: h + '-resize',
+                            ...(h.includes('n') ? { top: -6 } : h.includes('s') ? { bottom: -6 } : { top: '50%', marginTop: -6 }),
+                            ...(h.includes('w') ? { left: -6 } : h.includes('e') ? { right: -6 } : { left: '50%', marginLeft: -6 }),
+                            zIndex: 10,
+                            boxShadow: '0 0 4px rgba(0,0,0,0.3)',
+                          }}
+                          onMouseDown={e => { e.stopPropagation(); handleMouseDown(e, el.id, h); }}
+                        />
+                      );
+                    })}
                   </>
                 )}
               </div>
