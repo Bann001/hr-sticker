@@ -113,18 +113,24 @@ export function StickerDesigner({ onUseDesign }: Props) {
     e.preventDefault();
     const el = elements.find(x => x.id === elId);
     if (!el) return;
+    const startX = e.clientX;
+    const startY = e.clientY;
+    const startEl = { ...el };
+    let started = false;
     dragRef.current = {
       type: handle ? 'resize' : 'move',
       elId,
-      startMX: e.clientX,
-      startMY: e.clientY,
-      startEl: { ...el },
+      startMX: startX,
+      startMY: startY,
+      startEl,
       handle,
     };
     setSelectedId(elId);
 
     const onMove = (ev: MouseEvent) => {
       if (!dragRef.current) return;
+      if (!started && (Math.abs(ev.clientX - startX) < 3 && Math.abs(ev.clientY - startY) < 3)) return;
+      started = true;
       const dx = (ev.clientX - dragRef.current.startMX) / scale;
       const dy = (ev.clientY - dragRef.current.startMY) / scale;
       const s = dragRef.current.startEl;
@@ -281,8 +287,14 @@ export function StickerDesigner({ onUseDesign }: Props) {
                   ))}
                 </select>
 
-                <label style={styles.propLabel}>Size</label>
+                <label style={styles.propLabel}>Font Size</label>
                 <input style={styles.propInput} type="number" min={4} max={72} value={sel.fontSize} onChange={e => updateElement(sel.id, { fontSize: parseFloat(e.target.value) || 10 })} />
+
+                <label style={styles.propLabel}>Width</label>
+                <input style={styles.propInput} type="number" min={5} max={STICKER_W} value={Math.round(sel.widthMm)} onChange={e => { const w = parseFloat(e.target.value); if (w >= 5) updateElement(sel.id, { widthMm: w }); }} />
+
+                <label style={styles.propLabel}>Height</label>
+                <input style={styles.propInput} type="number" min={5} max={STICKER_H} value={Math.round(sel.heightMm)} onChange={e => { const h = parseFloat(e.target.value); if (h >= 5) updateElement(sel.id, { heightMm: h }); }} />
 
                 <label style={styles.propLabel}>Color</label>
                 <input style={styles.propInput} type="color" value={sel.color} onChange={e => updateElement(sel.id, { color: e.target.value })} />
@@ -339,9 +351,9 @@ export function StickerDesigner({ onUseDesign }: Props) {
                   width: el.widthMm * scale,
                   height: el.heightMm * scale,
                   cursor: dragRef.current?.elId === el.id ? 'grabbing' : 'grab',
-                  border: selectedId === el.id ? '1px dashed #7c5cfc' : '1px solid transparent',
-                  borderRadius: 2,
-                  background: selectedId === el.id ? 'rgba(124,92,252,0.06)' : 'transparent',
+                  border: selectedId === el.id ? '2px solid #7c5cfc' : '1px solid rgba(0,0,0,0.08)',
+                  borderRadius: 3,
+                  background: selectedId === el.id ? 'rgba(124,92,252,0.08)' : 'rgba(0,0,0,0.02)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: el.align === 'center' ? 'center' : el.align === 'right' ? 'flex-end' : 'flex-start',
@@ -384,16 +396,18 @@ export function StickerDesigner({ onUseDesign }: Props) {
                         key={h}
                         style={{
                           position: 'absolute',
-                          width: 8, height: 8,
+                          width: 12, height: 12,
                           background: '#7c5cfc',
-                          border: '1px solid #fff',
-                          borderRadius: 1,
+                          border: '2px solid #fff',
+                          borderRadius: 2,
                           cursor: h + '-resize',
-                          ...(h.includes('n') ? { top: -4 } : { bottom: -4 }),
-                          ...(h.includes('w') ? { left: -4 } : { right: -4 }),
+                          ...(h.includes('n') ? { top: -6 } : { bottom: -6 }),
+                          ...(h.includes('w') ? { left: -6 } : { right: -6 }),
                           zIndex: 10,
+                          boxShadow: '0 0 4px rgba(0,0,0,0.3)',
                         }}
                         onMouseDown={e => { e.stopPropagation(); handleMouseDown(e, el.id, h); }}
+                        onMouseUp={e => { e.stopPropagation(); }}
                       />
                     ))}
                   </>
