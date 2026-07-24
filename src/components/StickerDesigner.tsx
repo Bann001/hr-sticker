@@ -70,6 +70,7 @@ export function StickerDesigner({ onUseDesign, loadDesignId, onLoadDesignIdConsu
   const [showLibrary, setShowLibrary] = useState(false);
   const [logoDataUrl, setLogoDataUrl] = useState<string | undefined>();
   const [logoPreview, setLogoPreview] = useState<string | undefined>();
+  const [saved, setSaved] = useState(false);
 
   const canvasRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<{
@@ -197,6 +198,8 @@ export function StickerDesigner({ onUseDesign, loadDesignId, onLoadDesignIdConsu
     if (elements.length === 0) return;
     await saveDesignToSupabase(designName, elements);
     setSavedDesigns(await loadDesigns());
+    setSaved(true);
+    setTimeout(() => setSaved(false), 1500);
   }
 
   function loadDesign(id: string) {
@@ -302,9 +305,10 @@ export function StickerDesigner({ onUseDesign, loadDesignId, onLoadDesignIdConsu
 
           <button
             onClick={saveDesign}
-            className="h-9 px-4 bg-bg-surface border border-border rounded-xl text-xs font-semibold text-text-secondary hover:text-text-primary hover:bg-border transition-all"
+            className="h-9 px-4 bg-bg-surface border border-border rounded-xl text-xs font-semibold transition-all"
+            style={{ borderColor: saved ? '#22c55e' : undefined, color: saved ? '#22c55e' : undefined }}
           >
-            Save
+            {saved ? 'Saved!' : 'Save'}
           </button>
 
           <button
