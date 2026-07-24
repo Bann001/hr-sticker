@@ -12,6 +12,14 @@ import { renderDesign } from './utils/renderDesign';
 import { NavSidebar } from './components/ui/sidebar';
 import { TopToolbar } from './components/ui/toolbar';
 import { Card, CardContent } from './components/ui/card';
+import { DashboardPage } from './pages/Dashboard';
+import { TicketsPage } from './pages/Tickets';
+import { ChatPage } from './pages/Chat';
+import { ChatBuddyPage } from './pages/ChatBuddy';
+import { FilesPage } from './pages/Files';
+import { TeamsPage } from './pages/Teams';
+import { AnalyticsPage } from './pages/Analytics';
+import { SettingsPage } from './pages/Settings';
 
 export default function App() {
   const [tab, setTab] = useState<'generator' | 'designer'>('generator');
@@ -54,32 +62,21 @@ export default function App() {
     if (id === 'projects') setTab('designer');
   };
 
-  return (
-    <div className="flex h-screen bg-bg-primary overflow-hidden">
-      <NavSidebar activeTab={navTab} onTabChange={handleNavChange} />
-
-      <div className="flex-1 flex flex-col overflow-hidden min-w-0">
-        <TopToolbar
-          activeFilter={activeFilter}
-          onFilterChange={setActiveFilter}
-          activeProject={activeProject}
-          onProjectChange={() => {}}
-          sortBy={sortBy}
-          onSortChange={() => {}}
-          viewMode={viewMode}
-          onViewModeChange={() => {}}
-          onCreateTask={() => {}}
-          searchQuery={searchQuery}
-          onSearchChange={setSearchQuery}
-        />
-
-        <div className="flex-1 relative overflow-hidden">
-          {/* Generator View */}
-          <div
-            className="absolute inset-0 flex"
-            style={{ display: tab === 'generator' ? 'flex' : 'none' }}
-          >
-            {/* Sidebar panels */}
+  function renderPage() {
+    switch (navTab) {
+      case 'home':
+        return <DashboardPage />;
+      case 'projects':
+        return (
+          <div className="flex-1 flex">
+            <StickerDesigner onUseDesign={handleUseDesign} />
+          </div>
+        );
+      case 'tickets':
+        return <TicketsPage />;
+      case 'tasks':
+        return (
+          <div className="flex-1 flex overflow-hidden">
             <aside className="w-[340px] min-w-[340px] bg-bg-sidebar border-r border-border overflow-y-auto p-5 space-y-5">
               {isDesignMode && (
                 <div className="flex items-center gap-2 px-4 py-2.5 bg-success/10 border border-success/20 rounded-xl text-sm text-success">
@@ -96,42 +93,19 @@ export default function App() {
                   </button>
                 </div>
               )}
-
-              <Card>
-                <CardContent className="p-0">
-                  <ProductSelector
-                    product={product}
-                    onProductChange={setProduct}
-                    onLogoData={setLogoDataUrl}
-                  />
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardContent className="p-0">
-                  <BatchConfig
-                    product={product}
-                    layout={layout}
-                    onGenerate={handleGenerate}
-                    disabled={!product}
-                  />
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardContent className="p-0">
-                  <FontConfig config={fonts} onChange={setFonts} />
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardContent className="p-0">
-                  <LayoutConfig layout={layout} onChange={setLayout} />
-                </CardContent>
-              </Card>
+              <Card><CardContent className="p-0">
+                <ProductSelector product={product} onProductChange={setProduct} onLogoData={setLogoDataUrl} />
+              </CardContent></Card>
+              <Card><CardContent className="p-0">
+                <BatchConfig product={product} layout={layout} onGenerate={handleGenerate} disabled={!product} />
+              </CardContent></Card>
+              <Card><CardContent className="p-0">
+                <FontConfig config={fonts} onChange={setFonts} />
+              </CardContent></Card>
+              <Card><CardContent className="p-0">
+                <LayoutConfig layout={layout} onChange={setLayout} />
+              </CardContent></Card>
             </aside>
-
-            {/* Preview */}
             <main className="flex-1 min-w-0 overflow-hidden">
               <Preview
                 key={generated && isDesignMode ? 'design-preview' : generated ? 'preview' : 'empty'}
@@ -147,14 +121,47 @@ export default function App() {
               />
             </main>
           </div>
+        );
+      case 'chat':
+        return <ChatPage />;
+      case 'chat-buddy':
+        return <ChatBuddyPage />;
+      case 'files':
+        return <FilesPage />;
+      case 'teams':
+        return <TeamsPage />;
+      case 'analytics':
+        return <AnalyticsPage />;
+      case 'settings':
+        return <SettingsPage />;
+      default:
+        return <DashboardPage />;
+    }
+  }
 
-          {/* Designer View */}
-          <div
-            className="absolute inset-0"
-            style={{ display: tab === 'designer' ? 'flex' : 'none' }}
-          >
-            <StickerDesigner onUseDesign={handleUseDesign} />
-          </div>
+  return (
+    <div className="flex h-screen bg-bg-primary overflow-hidden">
+      <NavSidebar activeTab={navTab} onTabChange={handleNavChange} />
+
+      <div className="flex-1 flex flex-col overflow-hidden min-w-0">
+        {navTab === 'tasks' && (
+          <TopToolbar
+            activeFilter={activeFilter}
+            onFilterChange={setActiveFilter}
+            activeProject={activeProject}
+            onProjectChange={() => {}}
+            sortBy={sortBy}
+            onSortChange={() => {}}
+            viewMode={viewMode}
+            onViewModeChange={() => {}}
+            onCreateTask={() => {}}
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
+          />
+        )}
+
+        <div className="flex-1 overflow-auto">
+          {renderPage()}
         </div>
       </div>
     </div>
