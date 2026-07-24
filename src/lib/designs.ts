@@ -5,6 +5,7 @@ export interface StickerDesign {
   id: string;
   name: string;
   elements: DesignElement[];
+  logo_url?: string;
   created_at: string;
 }
 
@@ -14,16 +15,16 @@ export async function loadDesigns(): Promise<StickerDesign[]> {
   return (data as StickerDesign[]) || [];
 }
 
-export async function saveDesign(name: string, elements: DesignElement[]): Promise<void> {
+export async function saveDesign(name: string, elements: DesignElement[], logoUrl?: string): Promise<void> {
   if (elements.length === 0) return;
   const existing = await supabase.from('designs').select('id').eq('name', name).maybeSingle();
   if (existing.error) console.error('Supabase check error:', existing.error);
   if (existing.data) {
-    const { error } = await supabase.from('designs').update({ name, elements, created_at: new Date().toISOString() }).eq('id', existing.data.id);
+    const { error } = await supabase.from('designs').update({ name, elements, logo_url: logoUrl || null, created_at: new Date().toISOString() }).eq('id', existing.data.id);
     if (error) console.error('Supabase update error:', error);
   } else {
     const id = Date.now().toString();
-    const { error } = await supabase.from('designs').insert({ id, name, elements });
+    const { error } = await supabase.from('designs').insert({ id, name, elements, logo_url: logoUrl || null });
     if (error) console.error('Supabase insert error:', error);
   }
 }

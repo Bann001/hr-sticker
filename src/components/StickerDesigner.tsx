@@ -103,6 +103,7 @@ export function StickerDesigner({ onUseDesign, loadDesignId, onLoadDesignIdConsu
       if (!d) return;
       setElements(d.elements);
       setDesignName(d.name);
+      if (d.logo_url) { setLogoDataUrl(d.logo_url); setLogoPreview(d.logo_url); }
       setSelectedId(null);
       setShowLibrary(false);
       onLoadDesignIdConsumed?.();
@@ -196,7 +197,7 @@ export function StickerDesigner({ onUseDesign, loadDesignId, onLoadDesignIdConsu
 
   async function saveDesign() {
     if (elements.length === 0) return;
-    await saveDesignToSupabase(designName, elements);
+    await saveDesignToSupabase(designName, elements, logoDataUrl);
     setSavedDesigns(await loadDesigns());
     setSaved(true);
     setTimeout(() => setSaved(false), 1500);
@@ -207,6 +208,7 @@ export function StickerDesigner({ onUseDesign, loadDesignId, onLoadDesignIdConsu
       if (!d) return;
       setElements(d.elements);
       setDesignName(d.name);
+      if (d.logo_url) { setLogoDataUrl(d.logo_url); setLogoPreview(d.logo_url); }
       setSelectedId(null);
       setShowLibrary(false);
     });
@@ -224,6 +226,7 @@ export function StickerDesigner({ onUseDesign, loadDesignId, onLoadDesignIdConsu
       id: Date.now().toString(),
       name: designName,
       elements,
+      logo_url: logoDataUrl,
       created_at: new Date().toISOString(),
     };
     onUseDesign(design);

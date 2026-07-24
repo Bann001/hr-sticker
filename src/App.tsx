@@ -43,8 +43,9 @@ export default function App() {
     [],
   );
 
-  const handleUseDesign = useCallback((design: { elements: DesignElement[] }) => {
+  const handleUseDesign = useCallback((design: { elements: DesignElement[]; logo_url?: string }) => {
     setDesignElements(design.elements);
+    if (design.logo_url) setLogoDataUrl(design.logo_url);
     setStartInGenerate(true);
     setNavTab('tasks');
   }, []);
