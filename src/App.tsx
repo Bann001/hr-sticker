@@ -65,7 +65,7 @@ export default function App() {
           </div>
         );
       case 'projects':
-        return <ProjectsPage onNavigate={handleNavigate} />;
+        return <ProjectsPage onNavigate={handleNavigate} onUseDesign={handleUseDesign} />;
       case 'tickets':
         return <TicketsPage />;
       case 'tasks':

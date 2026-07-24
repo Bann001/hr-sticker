@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
-import { loadDesigns, deleteDesign as deleteDesignFromSupabase } from '../lib/designs';
+import { loadDesigns, findDesign, deleteDesign as deleteDesignFromSupabase } from '../lib/designs';
 import type { StickerDesign } from '../lib/designs';
+import type { DesignElement } from '../types';
 
 const projectTemplates = [
   { id: 'blank', name: 'Blank Canvas', desc: 'Start from scratch', icon: 'File' },
@@ -9,7 +10,7 @@ const projectTemplates = [
   { id: 'badge', name: 'Round Badge', desc: 'Circular badge design', icon: 'Circle' },
 ];
 
-export function ProjectsPage({ onNavigate }: { onNavigate?: (tab: string, designId?: string) => void }) {
+export function ProjectsPage({ onNavigate, onUseDesign }: { onNavigate?: (tab: string, designId?: string) => void; onUseDesign?: (design: { elements: DesignElement[] }) => void }) {
   const [saved, setSaved] = useState<StickerDesign[]>([]);
 
   useEffect(() => {
@@ -19,6 +20,11 @@ export function ProjectsPage({ onNavigate }: { onNavigate?: (tab: string, design
   const handleDelete = async (id: string) => {
     await deleteDesignFromSupabase(id);
     setSaved(await loadDesigns());
+  };
+
+  const handleUse = async (id: string) => {
+    const d = await findDesign(id);
+    if (d) onUseDesign?.(d);
   };
 
   return (
@@ -83,9 +89,15 @@ export function ProjectsPage({ onNavigate }: { onNavigate?: (tab: string, design
                 <div className="flex gap-2">
                   <button
                     onClick={() => onNavigate?.('create', d.id)}
-                    className="flex-1 h-8 bg-accent text-selected-text rounded-lg text-xs font-semibold hover:bg-accent-hover transition-all"
+                    className="flex-1 h-8 bg-bg-surface text-text-secondary border border-border rounded-lg text-xs hover:bg-border hover:text-text-primary transition-all"
                   >
                     Open
+                  </button>
+                  <button
+                    onClick={() => handleUse(d.id)}
+                    className="flex-1 h-8 bg-accent text-selected-text rounded-lg text-xs font-semibold hover:bg-accent-hover transition-all"
+                  >
+                    Use
                   </button>
                   <button
                     onClick={() => handleDelete(d.id)}
