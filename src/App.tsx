@@ -81,7 +81,6 @@ export default function App() {
             logoDataUrl={logoDataUrl}
             generated={generated}
             designElements={designElements}
-            isDesignMode={isDesignMode}
             startInGenerate={startInGenerate}
             onStartInGenerateConsumed={() => setStartInGenerate(false)}
             onProductChange={setProduct}
