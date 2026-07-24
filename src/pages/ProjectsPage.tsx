@@ -91,13 +91,13 @@ export function ProjectsPage({ onNavigate, onUseDesign }: { onNavigate?: (tab: s
                     onClick={() => onNavigate?.('create', d.id)}
                     className="flex-1 h-8 bg-bg-surface text-text-secondary border border-border rounded-lg text-xs hover:bg-border hover:text-text-primary transition-all"
                   >
-                    Open
+                    Edit
                   </button>
                   <button
                     onClick={() => handleUse(d.id)}
                     className="flex-1 h-8 bg-accent text-selected-text rounded-lg text-xs font-semibold hover:bg-accent-hover transition-all"
                   >
-                    Use
+                    Print
                   </button>
                   <button
                     onClick={() => handleDelete(d.id)}

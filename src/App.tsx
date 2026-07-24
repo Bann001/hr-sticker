@@ -24,6 +24,7 @@ export default function App() {
   const [generated, setGenerated] = useState(false);
   const [designElements, setDesignElements] = useState<DesignElement[] | null>(null);
   const [loadDesignId, setLoadDesignId] = useState<string | null>(null);
+  const [startInGenerate, setStartInGenerate] = useState(false);
 
   const [navTab, setNavTab] = useState('tasks');
   const [activeFilter, setActiveFilter] = useState('all');
@@ -44,6 +45,7 @@ export default function App() {
 
   const handleUseDesign = useCallback((design: { elements: DesignElement[] }) => {
     setDesignElements(design.elements);
+    setStartInGenerate(true);
     setNavTab('tasks');
   }, []);
 
@@ -79,6 +81,8 @@ export default function App() {
             generated={generated}
             designElements={designElements}
             isDesignMode={isDesignMode}
+            startInGenerate={startInGenerate}
+            onStartInGenerateConsumed={() => setStartInGenerate(false)}
             onProductChange={setProduct}
             onLayoutChange={setLayout}
             onFontsChange={setFonts}

@@ -30,6 +30,8 @@ interface Props {
   generated: boolean;
   designElements: DesignElement[] | null;
   isDesignMode: boolean;
+  startInGenerate?: boolean;
+  onStartInGenerateConsumed?: () => void;
   onProductChange: (p: Product | null) => void;
   onLayoutChange: (l: LayoutConfigType) => void;
   onFontsChange: (f: FontConfigType) => void;
@@ -40,6 +42,7 @@ interface Props {
 
 export function TasksPage({
   product, layout, fonts, stickers, logoDataUrl, generated, designElements, isDesignMode,
+  startInGenerate, onStartInGenerateConsumed,
   onProductChange, onLayoutChange, onFontsChange, onLogoData, onGenerate, onClearDesign,
 }: Props) {
   const [mode, setMode] = useState<'list' | 'generate'>('list');
@@ -60,6 +63,13 @@ export function TasksPage({
   useEffect(() => {
     if (generated) setMode('generate');
   }, [generated]);
+
+  useEffect(() => {
+    if (startInGenerate) {
+      setMode('generate');
+      onStartInGenerateConsumed?.();
+    }
+  }, [startInGenerate, onStartInGenerateConsumed]);
 
   if (mode === 'generate') {
     return (
