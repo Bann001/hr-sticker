@@ -91,24 +91,30 @@ export function TasksPage({
                 <path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z" />
                 <path d="m9 12 2 2 4-4" />
               </svg>
-              <span className="flex-1 text-sm">Using custom design</span>
+              <span className="flex-1 text-sm">Printing custom design</span>
               <button onClick={onClearDesign} className="text-xs font-medium text-text-muted hover:text-text-primary underline transition-colors">
                 clear
               </button>
             </div>
           )}
+          {!isDesignMode && (
+            <Card><CardContent className="p-0">
+              <ProductSelector product={product} onProductChange={onProductChange} onLogoData={onLogoData} />
+            </CardContent></Card>
+          )}
           <Card><CardContent className="p-0">
-            <ProductSelector product={product} onProductChange={onProductChange} onLogoData={onLogoData} />
+            <BatchConfig product={product} layout={layout} onGenerate={onGenerate} disabled={!product && !isDesignMode} designMode={isDesignMode} />
           </CardContent></Card>
-          <Card><CardContent className="p-0">
-            <BatchConfig product={product} layout={layout} onGenerate={onGenerate} disabled={!product} designMode={isDesignMode} />
-          </CardContent></Card>
-          <Card><CardContent className="p-0">
-            <FontConfig config={fonts} onChange={onFontsChange} />
-          </CardContent></Card>
-          <Card><CardContent className="p-0">
-            <LayoutConfig layout={layout} onChange={onLayoutChange} />
-          </CardContent></Card>
+          {!isDesignMode && (
+            <>
+              <Card><CardContent className="p-0">
+                <FontConfig config={fonts} onChange={onFontsChange} />
+              </CardContent></Card>
+              <Card><CardContent className="p-0">
+                <LayoutConfig layout={layout} onChange={onLayoutChange} />
+              </CardContent></Card>
+            </>
+          )}
         </aside>
         <main className="flex-1 min-w-0 overflow-hidden">
           <Preview

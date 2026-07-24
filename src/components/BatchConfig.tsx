@@ -45,27 +45,31 @@ export function BatchConfig({ product, layout, onGenerate, disabled, designMode 
   }
 
   async function handleGenerate() {
-    if (!product || quantity < 1) return;
+    if (quantity < 1) return;
+    if (!product && !designMode) return;
     setGenerating(true);
+    const dummyProduct = product || { id: '', name: '', distributor: '', volume: '', logo_url: '' } as Product;
     const stickers: StickerData[] = [];
     for (let i = 0; i < quantity; i++) {
       const serial = startSerial + i;
       stickers.push({ bt_number: generateBT(serial), serial });
     }
-    try {
-      await supabase.from('batches').insert({
-        product_id: product.id,
-        batch_code: batchCode,
-        start_serial: startSerial,
-        end_serial: startSerial + quantity - 1,
-        quantity,
-        status: 'completed',
-        layout_config: layout,
-      });
-    } catch { /* non-blocking */ }
+    if (product) {
+      try {
+        await supabase.from('batches').insert({
+          product_id: product.id,
+          batch_code: batchCode,
+          start_serial: startSerial,
+          end_serial: startSerial + quantity - 1,
+          quantity,
+          status: 'completed',
+          layout_config: layout,
+        });
+      } catch { /* non-blocking */ }
+    }
 
     let logo: string | undefined;
-    if (product.logo_url) {
+    if (dummyProduct.logo_url) {
       try {
         const img = new Image();
         img.crossOrigin = 'anonymous';
@@ -79,12 +83,12 @@ export function BatchConfig({ product, layout, onGenerate, disabled, designMode 
             resolve();
           };
           img.onerror = reject;
-          img.src = product.logo_url;
+          img.src = dummyProduct.logo_url;
         });
       } catch { /* ignore */ }
     }
 
-    onGenerate({ stickers, product, logo });
+    onGenerate({ stickers, product: dummyProduct, logo });
     setGenerating(false);
   }
 
@@ -150,9 +154,9 @@ export function BatchConfig({ product, layout, onGenerate, disabled, designMode 
         <motion.button
           className="flex-1 bg-accent text-selected-text hover:bg-accent-hover rounded-xl font-semibold px-5 py-2.5 text-sm transition-all duration-150 disabled:opacity-40 disabled:pointer-events-none"
           onClick={handleGenerate}
-          disabled={disabled || generating}
-          whileHover={disabled || generating ? {} : { scale: 1.03 }}
-          whileTap={disabled || generating ? {} : { scale: 0.97 }}
+          disabled={(!product && !designMode) || generating}
+          whileHover={(!product && !designMode) || generating ? {} : { scale: 1.03 }}
+          whileTap={(!product && !designMode) || generating ? {} : { scale: 0.97 }}
         >
           {generating ? 'Generating...' : 'Generate & Save'}
         </motion.button>
