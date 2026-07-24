@@ -23,6 +23,7 @@ export default function App() {
   const [logoDataUrl, setLogoDataUrl] = useState<string | undefined>();
   const [generated, setGenerated] = useState(false);
   const [designElements, setDesignElements] = useState<DesignElement[] | null>(null);
+  const [loadDesignId, setLoadDesignId] = useState<string | null>(null);
 
   const [navTab, setNavTab] = useState('tasks');
   const [activeFilter, setActiveFilter] = useState('all');
@@ -46,6 +47,11 @@ export default function App() {
     setNavTab('tasks');
   }, []);
 
+  const handleNavigate = useCallback((tab: string, designId?: string) => {
+    if (designId) setLoadDesignId(designId);
+    setNavTab(tab);
+  }, []);
+
   const isDesignMode = designElements !== null && designElements.length > 0;
 
   function renderPage() {
@@ -55,11 +61,11 @@ export default function App() {
       case 'create':
         return (
           <div className="flex-1 flex overflow-hidden">
-            <StickerDesigner onUseDesign={handleUseDesign} />
+            <StickerDesigner onUseDesign={handleUseDesign} loadDesignId={loadDesignId} onLoadDesignIdConsumed={() => setLoadDesignId(null)} />
           </div>
         );
       case 'projects':
-        return <ProjectsPage />;
+        return <ProjectsPage onNavigate={handleNavigate} />;
       case 'tickets':
         return <TicketsPage />;
       case 'tasks':

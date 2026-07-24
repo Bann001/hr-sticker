@@ -4,15 +4,8 @@ import type { DesignElement, ElementType, FontFamily } from '../types';
 import { STICKER_W, STICKER_H } from '../types';
 import { SavedLogos, saveLogoToLibrary } from './SavedLogos';
 import { removeBackground } from '../utils/removeBackground';
-
-const STORAGE_KEY = 'sticker-designs';
-
-interface StickerDesign {
-  id: string;
-  name: string;
-  elements: DesignElement[];
-  createdAt: string;
-}
+import { loadDesigns, saveDesign as saveDesignToSupabase, deleteDesign as deleteDesignFromSupabase, findDesign } from '../lib/designs';
+import type { StickerDesign } from '../lib/designs';
 
 let _id = 1;
 function uid() { return `el_${_id++}_${Date.now()}`; }
@@ -65,9 +58,11 @@ const ELEMENT_DESCRIPTIONS: Record<ElementType, string> = {
 
 interface Props {
   onUseDesign: (design: StickerDesign) => void;
+  loadDesignId?: string | null;
+  onLoadDesignIdConsumed?: () => void;
 }
 
-export function StickerDesigner({ onUseDesign }: Props) {
+export function StickerDesigner({ onUseDesign, loadDesignId, onLoadDesignIdConsumed }: Props) {
   const [elements, setElements] = useState<DesignElement[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [designName, setDesignName] = useState('My Design');
@@ -98,8 +93,20 @@ export function StickerDesigner({ onUseDesign }: Props) {
   const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
-    setSavedDesigns(loadDesigns());
+    loadDesigns().then(setSavedDesigns);
   }, []);
+
+  useEffect(() => {
+    if (!loadDesignId) return;
+    findDesign(loadDesignId).then(d => {
+      if (!d) return;
+      setElements(d.elements);
+      setDesignName(d.name);
+      setSelectedId(null);
+      setShowLibrary(false);
+      onLoadDesignIdConsumed?.();
+    });
+  }, [loadDesignId, onLoadDesignIdConsumed]);
 
   function addElement(type: ElementType) {
     const el = defaultElement(type, elements);
@@ -186,47 +193,36 @@ export function StickerDesigner({ onUseDesign }: Props) {
     reader.readAsDataURL(file);
   }
 
-  function saveDesign() {
+  async function saveDesign() {
     if (elements.length === 0) return;
-    const all = loadDesigns();
-    const existing = all.findIndex(d => d.name === designName);
-    const design: StickerDesign = {
-      id: existing >= 0 ? all[existing].id : Date.now().toString(),
-      name: designName,
-      elements,
-      createdAt: new Date().toISOString(),
-    };
-    if (existing >= 0) all[existing] = design;
-    else all.push(design);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(all));
-    setSavedDesigns(all);
+    await saveDesignToSupabase(designName, elements);
+    setSavedDesigns(await loadDesigns());
   }
 
   function loadDesign(id: string) {
-    const all = loadDesigns();
-    const d = all.find(x => x.id === id);
-    if (!d) return;
-    setElements(d.elements);
-    setDesignName(d.name);
-    setSelectedId(null);
-    setShowLibrary(false);
+    findDesign(id).then(d => {
+      if (!d) return;
+      setElements(d.elements);
+      setDesignName(d.name);
+      setSelectedId(null);
+      setShowLibrary(false);
+    });
   }
 
-  function deleteDesign(id: string) {
-    const all = loadDesigns().filter(d => d.id !== id);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(all));
-    setSavedDesigns(all);
+  async function deleteDesign(id: string) {
+    await deleteDesignFromSupabase(id);
+    setSavedDesigns(await loadDesigns());
   }
 
   function useDesign() {
     if (elements.length === 0) return;
+    saveDesign();
     const design: StickerDesign = {
       id: Date.now().toString(),
       name: designName,
       elements,
-      createdAt: new Date().toISOString(),
+      created_at: new Date().toISOString(),
     };
-    saveDesign();
     onUseDesign(design);
   }
 
@@ -312,7 +308,7 @@ export function StickerDesigner({ onUseDesign }: Props) {
           </button>
 
           <button
-            onClick={() => { setShowLibrary(!showLibrary); if (!showLibrary) setSavedDesigns(loadDesigns()); }}
+            onClick={() => { setShowLibrary(!showLibrary); if (!showLibrary) loadDesigns().then(setSavedDesigns); }}
             className="h-9 px-4 bg-bg-surface border border-border rounded-xl text-xs font-semibold text-text-secondary hover:text-text-primary hover:bg-border transition-all"
           >
             Library
@@ -518,154 +514,164 @@ export function StickerDesigner({ onUseDesign }: Props) {
           </div>
         </div>
 
-        {/* Right properties panel */}
-        {sel && (
-          <div className="w-[280px] min-w-[280px] bg-bg-sidebar border-l border-border overflow-y-auto p-4 space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="text-[11px] font-semibold text-text-muted uppercase tracking-wider">Properties</h3>
-              <span className="text-[10px] px-2 py-0.5 rounded-full bg-accent/10 text-accent font-medium capitalize">{sel.type}</span>
-            </div>
+        {/* Right properties panel — always rendered for stable layout */}
+          <div className="w-[280px] min-w-[280px] bg-bg-sidebar border-l border-border overflow-y-auto p-4">
+            {sel ? (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-[11px] font-semibold text-text-muted uppercase tracking-wider">Properties</h3>
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-accent/10 text-accent font-medium capitalize">{sel.type}</span>
+                </div>
 
-            {/* Position */}
-            <div className="space-y-2">
-              <h4 className="text-[10px] font-semibold text-text-muted uppercase tracking-wider">Position</h4>
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="text-[10px] text-text-muted block mb-0.5">X</label>
-                  <input className="w-full h-8 px-2.5 text-xs bg-bg-surface border border-border rounded-lg text-text-primary focus:outline-none focus:border-accent/30" type="number" value={Math.round(sel.xMm)} onChange={e => updateElement(sel.id, { xMm: Math.max(0, Math.min(STICKER_W - sel.widthMm, parseFloat(e.target.value) || 0)) })} />
-                </div>
-                <div>
-                  <label className="text-[10px] text-text-muted block mb-0.5">Y</label>
-                  <input className="w-full h-8 px-2.5 text-xs bg-bg-surface border border-border rounded-lg text-text-primary focus:outline-none focus:border-accent/30" type="number" value={Math.round(sel.yMm)} onChange={e => updateElement(sel.id, { yMm: Math.max(0, Math.min(STICKER_H - sel.heightMm, parseFloat(e.target.value) || 0)) })} />
-                </div>
-              </div>
-            </div>
-
-            {/* Size */}
-            <div className="space-y-2">
-              <h4 className="text-[10px] font-semibold text-text-muted uppercase tracking-wider">Size</h4>
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="text-[10px] text-text-muted block mb-0.5">W</label>
-                  <input className="w-full h-8 px-2.5 text-xs bg-bg-surface border border-border rounded-lg text-text-primary focus:outline-none focus:border-accent/30" type="number" min={5} max={STICKER_W} value={Math.round(sel.widthMm)} onChange={e => { const w = parseFloat(e.target.value); if (w >= 5) updateElement(sel.id, { widthMm: w }); }} />
-                </div>
-                <div>
-                  <label className="text-[10px] text-text-muted block mb-0.5">H</label>
-                  <input className="w-full h-8 px-2.5 text-xs bg-bg-surface border border-border rounded-lg text-text-primary focus:outline-none focus:border-accent/30" type="number" min={5} max={STICKER_H} value={Math.round(sel.heightMm)} onChange={e => { const h = parseFloat(e.target.value); if (h >= 5) updateElement(sel.id, { heightMm: h }); }} />
-                </div>
-              </div>
-            </div>
-
-            {/* Text content */}
-            {sel.type !== 'logo' && (
-              <div className="space-y-1.5">
-                <h4 className="text-[10px] font-semibold text-text-muted uppercase tracking-wider">Text</h4>
-                <input className="w-full h-8 px-2.5 text-xs bg-bg-surface border border-border rounded-lg text-text-primary focus:outline-none focus:border-accent/30" value={sel.content || ''} onChange={e => updateElement(sel.id, { content: e.target.value })} placeholder={sel.type === 'brand' ? 'Brand Name' : sel.type === 'distributor' ? 'Distributed by: Name' : sel.type === 'volume' ? '500ml' : sel.type === 'bt' ? 'BT: 00000' : 'Custom text'} />
-              </div>
-            )}
-
-            {/* Typography */}
-            <div className="space-y-2">
-              <h4 className="text-[10px] font-semibold text-text-muted uppercase tracking-wider">Typography</h4>
-              <div>
-                <label className="text-[10px] text-text-muted block mb-0.5">Font</label>
-                <select className="w-full h-8 px-2.5 pr-7 text-xs bg-bg-surface border border-border rounded-lg text-text-primary appearance-none cursor-pointer focus:outline-none focus:border-accent/30" value={sel.fontFamily} onChange={e => updateElement(sel.id, { fontFamily: e.target.value as FontFamily })}
-                  style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23727272' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 8px center', backgroundSize: '12px' }}>
-                  {['Carbona', 'Space Grotesk', 'Space Mono'].map(f => <option key={f} value={f}>{f}</option>)}
-                </select>
-              </div>
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="text-[10px] text-text-muted block mb-0.5">Size</label>
-                  <input className="w-full h-8 px-2.5 text-xs bg-bg-surface border border-border rounded-lg text-text-primary focus:outline-none focus:border-accent/30" type="number" min={4} max={72} value={sel.fontSize} onChange={e => updateElement(sel.id, { fontSize: parseFloat(e.target.value) || 10 })} />
-                </div>
-                <div>
-                  <label className="text-[10px] text-text-muted block mb-0.5">Color</label>
-                  <div className="flex gap-1.5">
-                    <input className="w-8 h-8 rounded-lg bg-bg-surface border border-border cursor-pointer" type="color" value={sel.color} onChange={e => updateElement(sel.id, { color: e.target.value })} />
-                    <input className="flex-1 h-8 px-2 text-xs bg-bg-surface border border-border rounded-lg text-text-primary font-mono focus:outline-none focus:border-accent/30" type="text" value={sel.color} onChange={e => updateElement(sel.id, { color: e.target.value })} />
+                {/* Position */}
+                <div className="space-y-2">
+                  <h4 className="text-[10px] font-semibold text-text-muted uppercase tracking-wider">Position</h4>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="text-[10px] text-text-muted block mb-0.5">X</label>
+                      <input className="w-full h-8 px-2.5 text-xs bg-bg-surface border border-border rounded-lg text-text-primary focus:outline-none focus:border-accent/30" type="number" value={Math.round(sel.xMm)} onChange={e => updateElement(sel.id, { xMm: Math.max(0, Math.min(STICKER_W - sel.widthMm, parseFloat(e.target.value) || 0)) })} />
+                    </div>
+                    <div>
+                      <label className="text-[10px] text-text-muted block mb-0.5">Y</label>
+                      <input className="w-full h-8 px-2.5 text-xs bg-bg-surface border border-border rounded-lg text-text-primary focus:outline-none focus:border-accent/30" type="number" value={Math.round(sel.yMm)} onChange={e => updateElement(sel.id, { yMm: Math.max(0, Math.min(STICKER_H - sel.heightMm, parseFloat(e.target.value) || 0)) })} />
+                    </div>
                   </div>
                 </div>
-              </div>
-            </div>
 
-            {/* Alignment */}
-            <div className="space-y-1.5">
-              <h4 className="text-[10px] font-semibold text-text-muted uppercase tracking-wider">Alignment</h4>
-              <div className="flex gap-1 bg-bg-surface border border-border rounded-lg p-0.5">
-                {(['left', 'center', 'right'] as CanvasTextAlign[]).map(a => (
+                {/* Size */}
+                <div className="space-y-2">
+                  <h4 className="text-[10px] font-semibold text-text-muted uppercase tracking-wider">Size</h4>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="text-[10px] text-text-muted block mb-0.5">W</label>
+                      <input className="w-full h-8 px-2.5 text-xs bg-bg-surface border border-border rounded-lg text-text-primary focus:outline-none focus:border-accent/30" type="number" min={5} max={STICKER_W} value={Math.round(sel.widthMm)} onChange={e => { const w = parseFloat(e.target.value); if (w >= 5) updateElement(sel.id, { widthMm: w }); }} />
+                    </div>
+                    <div>
+                      <label className="text-[10px] text-text-muted block mb-0.5">H</label>
+                      <input className="w-full h-8 px-2.5 text-xs bg-bg-surface border border-border rounded-lg text-text-primary focus:outline-none focus:border-accent/30" type="number" min={5} max={STICKER_H} value={Math.round(sel.heightMm)} onChange={e => { const h = parseFloat(e.target.value); if (h >= 5) updateElement(sel.id, { heightMm: h }); }} />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Text content */}
+                {sel.type !== 'logo' && (
+                  <div className="space-y-1.5">
+                    <h4 className="text-[10px] font-semibold text-text-muted uppercase tracking-wider">Text</h4>
+                    <input className="w-full h-8 px-2.5 text-xs bg-bg-surface border border-border rounded-lg text-text-primary focus:outline-none focus:border-accent/30" value={sel.content || ''} onChange={e => updateElement(sel.id, { content: e.target.value })} placeholder={sel.type === 'brand' ? 'Brand Name' : sel.type === 'distributor' ? 'Distributed by: Name' : sel.type === 'volume' ? '500ml' : sel.type === 'bt' ? 'BT: 00000' : 'Custom text'} />
+                  </div>
+                )}
+
+                {/* Typography */}
+                <div className="space-y-2">
+                  <h4 className="text-[10px] font-semibold text-text-muted uppercase tracking-wider">Typography</h4>
+                  <div>
+                    <label className="text-[10px] text-text-muted block mb-0.5">Font</label>
+                    <select className="w-full h-8 px-2.5 pr-7 text-xs bg-bg-surface border border-border rounded-lg text-text-primary appearance-none cursor-pointer focus:outline-none focus:border-accent/30" value={sel.fontFamily} onChange={e => updateElement(sel.id, { fontFamily: e.target.value as FontFamily })}
+                      style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23727272' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 8px center', backgroundSize: '12px' }}>
+                      {['Carbona', 'Space Grotesk', 'Space Mono'].map(f => <option key={f} value={f}>{f}</option>)}
+                    </select>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="text-[10px] text-text-muted block mb-0.5">Size</label>
+                      <input className="w-full h-8 px-2.5 text-xs bg-bg-surface border border-border rounded-lg text-text-primary focus:outline-none focus:border-accent/30" type="number" min={4} max={72} value={sel.fontSize} onChange={e => updateElement(sel.id, { fontSize: parseFloat(e.target.value) || 10 })} />
+                    </div>
+                    <div>
+                      <label className="text-[10px] text-text-muted block mb-0.5">Color</label>
+                      <div className="flex gap-1.5">
+                        <input className="w-8 h-8 rounded-lg bg-bg-surface border border-border cursor-pointer" type="color" value={sel.color} onChange={e => updateElement(sel.id, { color: e.target.value })} />
+                        <input className="flex-1 h-8 px-2 text-xs bg-bg-surface border border-border rounded-lg text-text-primary font-mono focus:outline-none focus:border-accent/30" type="text" value={sel.color} onChange={e => updateElement(sel.id, { color: e.target.value })} />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Alignment */}
+                <div className="space-y-1.5">
+                  <h4 className="text-[10px] font-semibold text-text-muted uppercase tracking-wider">Alignment</h4>
+                  <div className="flex gap-1 bg-bg-surface border border-border rounded-lg p-0.5">
+                    {(['left', 'center', 'right'] as CanvasTextAlign[]).map(a => (
+                      <button
+                        key={a}
+                        onClick={() => updateElement(sel.id, { align: a })}
+                        className={`flex-1 h-8 rounded-md text-xs font-medium transition-all ${sel.align === a ? 'bg-accent text-selected-text' : 'text-text-muted hover:text-text-primary'}`}
+                      >
+                        {a === 'left' ? <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mx-auto"><line x1="17" y1="10" x2="3" y2="10" /><line x1="21" y1="6" x2="3" y2="6" /><line x1="17" y1="14" x2="3" y2="14" /><line x1="21" y1="18" x2="3" y2="18" /></svg> :
+                         a === 'center' ? <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mx-auto"><line x1="18" y1="10" x2="6" y2="10" /><line x1="21" y1="6" x2="3" y2="6" /><line x1="18" y1="14" x2="6" y2="14" /><line x1="21" y1="18" x2="3" y2="18" /></svg> :
+                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mx-auto"><line x1="7" y1="10" x2="21" y2="10" /><line x1="3" y1="6" x2="21" y2="6" /><line x1="7" y1="14" x2="21" y2="14" /><line x1="3" y1="18" x2="21" y2="18" /></svg>}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="flex items-center gap-2 pt-1">
+                    <input type="checkbox" id="bold-check" checked={sel.bold} onChange={e => updateElement(sel.id, { bold: e.target.checked })} className="w-4 h-4 rounded accent-accent" />
+                    <label htmlFor="bold-check" className="text-xs text-text-secondary font-medium cursor-pointer">Bold</label>
+                  </div>
+                </div>
+
+                <div className="pt-3 border-t border-border space-y-1.5">
                   <button
-                    key={a}
-                    onClick={() => updateElement(sel.id, { align: a })}
-                    className={`flex-1 h-8 rounded-md text-xs font-medium transition-all ${sel.align === a ? 'bg-accent text-selected-text' : 'text-text-muted hover:text-text-primary'}`}
+                    onClick={() => {
+                      const idx = elements.findIndex(e => e.id === sel.id);
+                      if (idx > 0) {
+                        const arr = [...elements];
+                        [arr[idx - 1], arr[idx]] = [arr[idx], arr[idx - 1]];
+                        setElements(arr);
+                      }
+                    }}
+                    className="w-full h-8 px-3 bg-bg-surface border border-border rounded-lg text-xs text-text-secondary hover:text-text-primary hover:bg-border transition-all flex items-center gap-2"
                   >
-                    {a === 'left' ? <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mx-auto"><line x1="17" y1="10" x2="3" y2="10" /><line x1="21" y1="6" x2="3" y2="6" /><line x1="17" y1="14" x2="3" y2="14" /><line x1="21" y1="18" x2="3" y2="18" /></svg> :
-                     a === 'center' ? <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mx-auto"><line x1="18" y1="10" x2="6" y2="10" /><line x1="21" y1="6" x2="3" y2="6" /><line x1="18" y1="14" x2="6" y2="14" /><line x1="21" y1="18" x2="3" y2="18" /></svg> :
-                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mx-auto"><line x1="7" y1="10" x2="21" y2="10" /><line x1="3" y1="6" x2="21" y2="6" /><line x1="7" y1="14" x2="21" y2="14" /><line x1="3" y1="18" x2="21" y2="18" /></svg>}
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19" /><polyline points="19 12 12 19 5 12" /></svg>
+                    Bring Forward
                   </button>
-                ))}
-              </div>
-              <div className="flex items-center gap-2 pt-1">
-                <input type="checkbox" id="bold-check" checked={sel.bold} onChange={e => updateElement(sel.id, { bold: e.target.checked })} className="w-4 h-4 rounded accent-accent" />
-                <label htmlFor="bold-check" className="text-xs text-text-secondary font-medium cursor-pointer">Bold</label>
-              </div>
-            </div>
+                  <button
+                    onClick={() => {
+                      const idx = elements.findIndex(e => e.id === sel.id);
+                      if (idx < elements.length - 1) {
+                        const arr = [...elements];
+                        [arr[idx + 1], arr[idx]] = [arr[idx], arr[idx + 1]];
+                        setElements(arr);
+                      }
+                    }}
+                    className="w-full h-8 px-3 bg-bg-surface border border-border rounded-lg text-xs text-text-secondary hover:text-text-primary hover:bg-border transition-all flex items-center gap-2"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19" /><polyline points="5 12 12 5 19 12" /></svg>
+                    Send Backward
+                  </button>
+                </div>
 
-            <div className="pt-3 border-t border-border space-y-1.5">
-              <button
-                onClick={() => {
-                  const idx = elements.findIndex(e => e.id === sel.id);
-                  if (idx > 0) {
-                    const arr = [...elements];
-                    [arr[idx - 1], arr[idx]] = [arr[idx], arr[idx - 1]];
-                    setElements(arr);
-                  }
-                }}
-                className="w-full h-8 px-3 bg-bg-surface border border-border rounded-lg text-xs text-text-secondary hover:text-text-primary hover:bg-border transition-all flex items-center gap-2"
-              >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19" /><polyline points="19 12 12 19 5 12" /></svg>
-                Bring Forward
-              </button>
-              <button
-                onClick={() => {
-                  const idx = elements.findIndex(e => e.id === sel.id);
-                  if (idx < elements.length - 1) {
-                    const arr = [...elements];
-                    [arr[idx + 1], arr[idx]] = [arr[idx], arr[idx + 1]];
-                    setElements(arr);
-                  }
-                }}
-                className="w-full h-8 px-3 bg-bg-surface border border-border rounded-lg text-xs text-text-secondary hover:text-text-primary hover:bg-border transition-all flex items-center gap-2"
-              >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19" /><polyline points="5 12 12 5 19 12" /></svg>
-                Send Backward
-              </button>
-            </div>
-
-            <div className="pt-3 border-t border-border space-y-1.5">
-              <button
-                onClick={() => {
-                  const el = elements.find(e => e.id === sel.id);
-                  if (!el) return;
-                  const newEl = { ...defaultElement(el.type, elements), id: uid(), xMm: el.xMm + 3, yMm: el.yMm + 3, widthMm: el.widthMm, heightMm: el.heightMm, fontSize: el.fontSize, fontFamily: el.fontFamily, color: el.color, align: el.align, bold: el.bold, content: el.content };
-                  setElements(prev => [...prev, newEl]);
-                  setSelectedId(newEl.id);
-                }}
-                className="w-full h-8 px-3 bg-bg-surface border border-border rounded-lg text-xs text-text-secondary hover:text-text-primary hover:bg-border transition-all flex items-center gap-2"
-              >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" /></svg>
-                Duplicate
-              </button>
-              <button
-                onClick={() => removeElement(sel.id)}
-                className="w-full h-8 px-3 bg-danger/10 border border-danger/20 rounded-lg text-xs text-danger font-medium hover:bg-danger/20 transition-all flex items-center gap-2"
-              >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /></svg>
-                Delete
-              </button>
-            </div>
+                <div className="pt-3 border-t border-border space-y-1.5">
+                  <button
+                    onClick={() => {
+                      const el = elements.find(e => e.id === sel.id);
+                      if (!el) return;
+                      const newEl = { ...defaultElement(el.type, elements), id: uid(), xMm: el.xMm + 3, yMm: el.yMm + 3, widthMm: el.widthMm, heightMm: el.heightMm, fontSize: el.fontSize, fontFamily: el.fontFamily, color: el.color, align: el.align, bold: el.bold, content: el.content };
+                      setElements(prev => [...prev, newEl]);
+                      setSelectedId(newEl.id);
+                    }}
+                    className="w-full h-8 px-3 bg-bg-surface border border-border rounded-lg text-xs text-text-secondary hover:text-text-primary hover:bg-border transition-all flex items-center gap-2"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" /></svg>
+                    Duplicate
+                  </button>
+                  <button
+                    onClick={() => removeElement(sel.id)}
+                    className="w-full h-8 px-3 bg-danger/10 border border-danger/20 rounded-lg text-xs text-danger font-medium hover:bg-danger/20 transition-all flex items-center gap-2"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /></svg>
+                    Delete
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center h-full text-center">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#727272" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="mb-3">
+                  <circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" />
+                </svg>
+                <p className="text-sm text-text-muted">No element selected</p>
+                <p className="text-xs text-text-muted/60 mt-1">Click an element on the canvas to edit its properties</p>
+              </div>
+            )}
           </div>
-        )}
       </div>
 
       {/* Library modal */}
@@ -687,7 +693,7 @@ export function StickerDesigner({ onUseDesign }: Props) {
                     </div>
                     <div className="flex gap-1">
                       <motion.button className="h-8 px-3 bg-bg-surface text-text-secondary border border-border rounded-lg text-xs hover:bg-border hover:text-text-primary cursor-pointer" onClick={() => loadDesign(d.id)} whileHover={{ scale: 1.06 }}>Load</motion.button>
-                      <motion.button className="h-8 px-3 bg-bg-surface text-danger border border-border rounded-lg text-xs hover:bg-border cursor-pointer" onClick={() => deleteDesign(d.id)} whileHover={{ scale: 1.06 }}>Del</motion.button>
+                      <motion.button className="h-8 px-3 bg-bg-surface text-danger border border-border rounded-lg text-xs hover:bg-border cursor-pointer" onClick={() => deleteDesign(d.id).then(() => loadDesigns().then(setSavedDesigns))} whileHover={{ scale: 1.06 }}>Del</motion.button>
                     </div>
                   </div>
                 ))}
@@ -698,13 +704,6 @@ export function StickerDesigner({ onUseDesign }: Props) {
       </AnimatePresence>
     </motion.div>
   );
-}
-
-export type { StickerDesign };
-export { loadDesigns };
-
-function loadDesigns(): StickerDesign[] {
-  try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); } catch { return []; }
 }
 
 const ELEMENT_ICONS: Record<string, React.ReactNode> = {

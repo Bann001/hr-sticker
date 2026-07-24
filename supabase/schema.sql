@@ -1,5 +1,15 @@
 -- Product stickers generator schema
 
+CREATE TABLE designs (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  elements JSONB NOT NULL DEFAULT '[]'::jsonb,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+ALTER TABLE designs ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Public access" ON designs FOR ALL USING (true) WITH CHECK (true);
+
 CREATE TABLE products (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name TEXT NOT NULL,
