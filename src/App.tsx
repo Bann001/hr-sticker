@@ -2,7 +2,6 @@ import { useState, useCallback } from 'react';
 import type { Product, LayoutConfig as LayoutConfigType, StickerData, FontConfig as FontConfigType, DesignElement } from './types';
 import { DEFAULT_LAYOUT, DEFAULT_FONTS } from './types';
 import { NavSidebar } from './components/ui/sidebar';
-import { TopToolbar } from './components/ui/toolbar';
 import { StickerDesigner } from './components/StickerDesigner';
 import { TasksPage } from './pages/TasksPage';
 import { DashboardPage } from './pages/Dashboard';
@@ -27,11 +26,6 @@ export default function App() {
   const [startInGenerate, setStartInGenerate] = useState(false);
 
   const [navTab, setNavTab] = useState('tasks');
-  const [activeFilter, setActiveFilter] = useState('all');
-  const [activeProject] = useState('All Projects');
-  const [sortBy] = useState('newest');
-  const [viewMode] = useState<'grid' | 'list'>('list');
-  const [searchQuery, setSearchQuery] = useState('');
 
   const handleGenerate = useCallback(
     (data: { stickers: StickerData[]; product: Product; logo?: string }) => {
@@ -114,22 +108,6 @@ export default function App() {
       <NavSidebar activeTab={navTab} onTabChange={setNavTab} />
 
       <div className="flex-1 flex flex-col overflow-hidden min-w-0">
-        {navTab === 'tasks' && (
-          <TopToolbar
-            activeFilter={activeFilter}
-            onFilterChange={setActiveFilter}
-            activeProject={activeProject}
-            onProjectChange={() => {}}
-            sortBy={sortBy}
-            onSortChange={() => {}}
-            viewMode={viewMode}
-            onViewModeChange={() => {}}
-            onCreateTask={() => {}}
-            searchQuery={searchQuery}
-            onSearchChange={setSearchQuery}
-          />
-        )}
-
         <div className="flex-1 overflow-auto">
           {renderPage()}
         </div>
