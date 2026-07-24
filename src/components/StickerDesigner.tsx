@@ -113,15 +113,12 @@ export function StickerDesigner({ onUseDesign }: Props) {
     e.preventDefault();
     const el = elements.find(x => x.id === elId);
     if (!el) return;
-    const startX = e.clientX;
-    const startY = e.clientY;
     const startEl = { ...el };
-    let started = false;
     dragRef.current = {
       type: handle ? 'resize' : 'move',
       elId,
-      startMX: startX,
-      startMY: startY,
+      startMX: e.clientX,
+      startMY: e.clientY,
       startEl,
       handle,
     };
@@ -129,8 +126,6 @@ export function StickerDesigner({ onUseDesign }: Props) {
 
     const onMove = (ev: MouseEvent) => {
       if (!dragRef.current) return;
-      if (!started && (Math.abs(ev.clientX - startX) < 3 && Math.abs(ev.clientY - startY) < 3)) return;
-      started = true;
       const dx = (ev.clientX - dragRef.current.startMX) / scale;
       const dy = (ev.clientY - dragRef.current.startMY) / scale;
       const s = dragRef.current.startEl;
@@ -407,7 +402,6 @@ export function StickerDesigner({ onUseDesign }: Props) {
                           boxShadow: '0 0 4px rgba(0,0,0,0.3)',
                         }}
                         onMouseDown={e => { e.stopPropagation(); handleMouseDown(e, el.id, h); }}
-                        onMouseUp={e => { e.stopPropagation(); }}
                       />
                     ))}
                   </>
