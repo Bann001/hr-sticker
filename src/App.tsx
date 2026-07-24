@@ -1,11 +1,12 @@
 import { useState, useCallback } from 'react';
 import type { Product, LayoutConfig as LayoutConfigType, StickerData, FontConfig as FontConfigType, DesignElement } from './types';
 import { DEFAULT_LAYOUT, DEFAULT_FONTS } from './types';
-import { StickerDesigner } from './components/StickerDesigner';
 import { NavSidebar } from './components/ui/sidebar';
 import { TopToolbar } from './components/ui/toolbar';
 import { TasksPage } from './pages/TasksPage';
 import { DashboardPage } from './pages/Dashboard';
+import { ProjectsPage } from './pages/ProjectsPage';
+import { LogoCreator } from './pages/LogoCreator';
 import { TicketsPage } from './pages/Tickets';
 import { ChatPage } from './pages/Chat';
 import { ChatBuddyPage } from './pages/ChatBuddy';
@@ -51,12 +52,10 @@ export default function App() {
     switch (navTab) {
       case 'home':
         return <DashboardPage />;
+      case 'create':
+        return <LogoCreator />;
       case 'projects':
-        return (
-          <div className="flex-1 flex overflow-hidden">
-            <StickerDesigner onUseDesign={handleUseDesign} />
-          </div>
-        );
+        return <ProjectsPage onUseDesign={handleUseDesign} />;
       case 'tickets':
         return <TicketsPage />;
       case 'tasks':
