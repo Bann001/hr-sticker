@@ -44,12 +44,13 @@ export function renderDesign(
     }
 
     let text = el.content || '';
-    if (!text) {
+    if (el.type === 'bt') {
+      text = `BT: ${btNumber}`;
+    } else if (!text) {
       switch (el.type) {
         case 'brand':    text = product.name; break;
         case 'distributor': text = `Distributed by: ${product.distributor}`; break;
         case 'volume':   text = product.volume; break;
-        case 'bt':       text = `BT: ${btNumber}`; break;
       }
     }
 
