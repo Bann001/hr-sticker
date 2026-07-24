@@ -96,50 +96,86 @@ export function BatchConfig({ product, layout, onGenerate, disabled, designMode 
     <div className="p-5 space-y-4">
       <h3 className="text-[11px] font-semibold uppercase tracking-wider text-text-muted mb-2">Batch</h3>
 
-      <motion.div {...fieldProps} transition={{ delay: 0.05 }}>
-        <label className="text-[11px] font-semibold text-text-muted uppercase tracking-wider">Batch code (YYMM)</label>
-        <input
-          className="h-10 px-3.5 text-sm bg-bg-surface border border-border rounded-xl text-text-primary w-full focus:outline-none focus:border-accent/30 focus:ring-1 focus:ring-accent/10 placeholder:text-text-muted/60"
-          value={batchCode}
-          onChange={e => setBatchCode(e.target.value.replace(/\D/g, '').slice(0, 4))}
-          placeholder="2612"
-          maxLength={4}
-        />
-      </motion.div>
+      {designMode ? (
+        <>
+          <motion.div {...fieldProps} transition={{ delay: 0.05 }}>
+            <label className="text-[11px] font-semibold text-text-muted uppercase tracking-wider">Starting number</label>
+            <input
+              className="h-10 px-3.5 text-sm bg-bg-surface border border-border rounded-xl text-text-primary w-full focus:outline-none focus:border-accent/30 focus:ring-1 focus:ring-accent/10 placeholder:text-text-muted/60"
+              type="number"
+              min={1}
+              value={startSerial}
+              onChange={e => setStartSerial(Math.max(1, parseInt(e.target.value) || 1))}
+            />
+          </motion.div>
 
-      <motion.div {...fieldProps} transition={{ delay: 0.1 }}>
-        <label className="text-[11px] font-semibold text-text-muted uppercase tracking-wider">Batch number (2 digits)</label>
-        <input
-          className="h-10 px-3.5 text-sm bg-bg-surface border border-border rounded-xl text-text-primary w-full focus:outline-none focus:border-accent/30 focus:ring-1 focus:ring-accent/10 placeholder:text-text-muted/60"
-          value={batchNum}
-          onChange={e => setBatchNum(e.target.value.replace(/\D/g, '').slice(0, 2))}
-          placeholder="01"
-          maxLength={2}
-        />
-      </motion.div>
+          <motion.div {...fieldProps} transition={{ delay: 0.1 }}>
+            <label className="text-[11px] font-semibold text-text-muted uppercase tracking-wider">Quantity</label>
+            <input
+              className="h-10 px-3.5 text-sm bg-bg-surface border border-border rounded-xl text-text-primary w-full focus:outline-none focus:border-accent/30 focus:ring-1 focus:ring-accent/10 placeholder:text-text-muted/60"
+              type="number"
+              min={1}
+              max={10000}
+              value={quantity}
+              onChange={e => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
+            />
+          </motion.div>
 
-      <motion.div {...fieldProps} transition={{ delay: 0.15 }}>
-        <label className="text-[11px] font-semibold text-text-muted uppercase tracking-wider">Start serial</label>
-        <input
-          className="h-10 px-3.5 text-sm bg-bg-surface border border-border rounded-xl text-text-primary w-full focus:outline-none focus:border-accent/30 focus:ring-1 focus:ring-accent/10 placeholder:text-text-muted/60"
-          type="number"
-          min={1}
-          value={startSerial}
-          onChange={e => setStartSerial(Math.max(1, parseInt(e.target.value) || 1))}
-        />
-      </motion.div>
+          <motion.div {...fieldProps} transition={{ delay: 0.15 }}>
+            <div className="bg-bg-surface border border-border rounded-xl px-3.5 py-2.5">
+              <span className="text-xs text-text-muted">BT range: </span>
+              <span className="text-xs text-text-primary font-mono">{generateBT(startSerial)} – {generateBT(startSerial + quantity - 1)}</span>
+            </div>
+          </motion.div>
+        </>
+      ) : (
+        <>
+          <motion.div {...fieldProps} transition={{ delay: 0.05 }}>
+            <label className="text-[11px] font-semibold text-text-muted uppercase tracking-wider">Batch code (YYMM)</label>
+            <input
+              className="h-10 px-3.5 text-sm bg-bg-surface border border-border rounded-xl text-text-primary w-full focus:outline-none focus:border-accent/30 focus:ring-1 focus:ring-accent/10 placeholder:text-text-muted/60"
+              value={batchCode}
+              onChange={e => setBatchCode(e.target.value.replace(/\D/g, '').slice(0, 4))}
+              placeholder="2612"
+              maxLength={4}
+            />
+          </motion.div>
 
-      <motion.div {...fieldProps} transition={{ delay: 0.2 }}>
-        <label className="text-[11px] font-semibold text-text-muted uppercase tracking-wider">Quantity</label>
-        <input
-          className="h-10 px-3.5 text-sm bg-bg-surface border border-border rounded-xl text-text-primary w-full focus:outline-none focus:border-accent/30 focus:ring-1 focus:ring-accent/10 placeholder:text-text-muted/60"
-          type="number"
-          min={1}
-          max={10000}
-          value={quantity}
-          onChange={e => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
-        />
-      </motion.div>
+          <motion.div {...fieldProps} transition={{ delay: 0.1 }}>
+            <label className="text-[11px] font-semibold text-text-muted uppercase tracking-wider">Batch number (2 digits)</label>
+            <input
+              className="h-10 px-3.5 text-sm bg-bg-surface border border-border rounded-xl text-text-primary w-full focus:outline-none focus:border-accent/30 focus:ring-1 focus:ring-accent/10 placeholder:text-text-muted/60"
+              value={batchNum}
+              onChange={e => setBatchNum(e.target.value.replace(/\D/g, '').slice(0, 2))}
+              placeholder="01"
+              maxLength={2}
+            />
+          </motion.div>
+
+          <motion.div {...fieldProps} transition={{ delay: 0.15 }}>
+            <label className="text-[11px] font-semibold text-text-muted uppercase tracking-wider">Start serial</label>
+            <input
+              className="h-10 px-3.5 text-sm bg-bg-surface border border-border rounded-xl text-text-primary w-full focus:outline-none focus:border-accent/30 focus:ring-1 focus:ring-accent/10 placeholder:text-text-muted/60"
+              type="number"
+              min={1}
+              value={startSerial}
+              onChange={e => setStartSerial(Math.max(1, parseInt(e.target.value) || 1))}
+            />
+          </motion.div>
+
+          <motion.div {...fieldProps} transition={{ delay: 0.2 }}>
+            <label className="text-[11px] font-semibold text-text-muted uppercase tracking-wider">Quantity</label>
+            <input
+              className="h-10 px-3.5 text-sm bg-bg-surface border border-border rounded-xl text-text-primary w-full focus:outline-none focus:border-accent/30 focus:ring-1 focus:ring-accent/10 placeholder:text-text-muted/60"
+              type="number"
+              min={1}
+              max={10000}
+              value={quantity}
+              onChange={e => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
+            />
+          </motion.div>
+        </>
+      )}
 
       <div className="flex gap-2 mt-2">
         <motion.button
