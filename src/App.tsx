@@ -1,17 +1,10 @@
 import { useState, useCallback } from 'react';
 import type { Product, LayoutConfig as LayoutConfigType, StickerData, FontConfig as FontConfigType, DesignElement } from './types';
 import { DEFAULT_LAYOUT, DEFAULT_FONTS } from './types';
-import { ProductSelector } from './components/ProductSelector';
-import { BatchConfig } from './components/BatchConfig';
-import { LayoutConfig } from './components/LayoutConfig';
-import { FontConfig } from './components/FontConfig';
-import { Preview } from './components/Preview';
 import { StickerDesigner } from './components/StickerDesigner';
-import { generatePDF, generatePDFFromDesign } from './utils/pdf';
-import { renderDesign } from './utils/renderDesign';
 import { NavSidebar } from './components/ui/sidebar';
 import { TopToolbar } from './components/ui/toolbar';
-import { Card, CardContent } from './components/ui/card';
+import { TasksPage } from './pages/TasksPage';
 import { DashboardPage } from './pages/Dashboard';
 import { TicketsPage } from './pages/Tickets';
 import { ChatPage } from './pages/Chat';
@@ -22,7 +15,6 @@ import { AnalyticsPage } from './pages/Analytics';
 import { SettingsPage } from './pages/Settings';
 
 export default function App() {
-  const [tab, setTab] = useState<'generator' | 'designer'>('generator');
   const [product, setProduct] = useState<Product | null>(null);
   const [layout, setLayout] = useState<LayoutConfigType>(DEFAULT_LAYOUT);
   const [fonts, setFonts] = useState<FontConfigType>(DEFAULT_FONTS);
@@ -50,17 +42,10 @@ export default function App() {
 
   const handleUseDesign = useCallback((design: { elements: DesignElement[] }) => {
     setDesignElements(design.elements);
-    setTab('generator');
-    setGenerated(false);
+    setNavTab('tasks');
   }, []);
 
   const isDesignMode = designElements !== null && designElements.length > 0;
-
-  const handleNavChange = (id: string) => {
-    setNavTab(id);
-    if (id === 'tasks') setTab('generator');
-    if (id === 'projects') setTab('designer');
-  };
 
   function renderPage() {
     switch (navTab) {
@@ -68,7 +53,7 @@ export default function App() {
         return <DashboardPage />;
       case 'projects':
         return (
-          <div className="flex-1 flex">
+          <div className="flex-1 flex overflow-hidden">
             <StickerDesigner onUseDesign={handleUseDesign} />
           </div>
         );
@@ -76,51 +61,22 @@ export default function App() {
         return <TicketsPage />;
       case 'tasks':
         return (
-          <div className="flex-1 flex overflow-hidden">
-            <aside className="w-[340px] min-w-[340px] bg-bg-sidebar border-r border-border overflow-y-auto p-5 space-y-5">
-              {isDesignMode && (
-                <div className="flex items-center gap-2 px-4 py-2.5 bg-success/10 border border-success/20 rounded-xl text-sm text-success">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
-                    <path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z" />
-                    <path d="m9 12 2 2 4-4" />
-                  </svg>
-                  <span className="flex-1 text-sm">Using custom design</span>
-                  <button
-                    onClick={() => setDesignElements(null)}
-                    className="text-xs font-medium text-text-muted hover:text-text-primary underline transition-colors"
-                  >
-                    clear
-                  </button>
-                </div>
-              )}
-              <Card><CardContent className="p-0">
-                <ProductSelector product={product} onProductChange={setProduct} onLogoData={setLogoDataUrl} />
-              </CardContent></Card>
-              <Card><CardContent className="p-0">
-                <BatchConfig product={product} layout={layout} onGenerate={handleGenerate} disabled={!product} />
-              </CardContent></Card>
-              <Card><CardContent className="p-0">
-                <FontConfig config={fonts} onChange={setFonts} />
-              </CardContent></Card>
-              <Card><CardContent className="p-0">
-                <LayoutConfig layout={layout} onChange={setLayout} />
-              </CardContent></Card>
-            </aside>
-            <main className="flex-1 min-w-0 overflow-hidden">
-              <Preview
-                key={generated && isDesignMode ? 'design-preview' : generated ? 'preview' : 'empty'}
-                stickers={stickers}
-                product={product}
-                layout={layout}
-                fonts={fonts}
-                logoDataUrl={logoDataUrl}
-                visible={generated}
-                designElements={isDesignMode ? designElements : undefined}
-                generatePDFOverride={isDesignMode ? generatePDFFromDesign : undefined}
-                renderStickerOverride={isDesignMode ? renderDesign : undefined}
-              />
-            </main>
-          </div>
+          <TasksPage
+            product={product}
+            layout={layout}
+            fonts={fonts}
+            stickers={stickers}
+            logoDataUrl={logoDataUrl}
+            generated={generated}
+            designElements={designElements}
+            isDesignMode={isDesignMode}
+            onProductChange={setProduct}
+            onLayoutChange={setLayout}
+            onFontsChange={setFonts}
+            onLogoData={setLogoDataUrl}
+            onGenerate={handleGenerate}
+            onClearDesign={() => setDesignElements(null)}
+          />
         );
       case 'chat':
         return <ChatPage />;
@@ -141,7 +97,7 @@ export default function App() {
 
   return (
     <div className="flex h-screen bg-bg-primary overflow-hidden">
-      <NavSidebar activeTab={navTab} onTabChange={handleNavChange} />
+      <NavSidebar activeTab={navTab} onTabChange={setNavTab} />
 
       <div className="flex-1 flex flex-col overflow-hidden min-w-0">
         {navTab === 'tasks' && (
