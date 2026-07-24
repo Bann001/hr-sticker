@@ -9,6 +9,7 @@ interface Props {
   layout: LayoutConfig;
   onGenerate: (data: { stickers: StickerData[]; product: Product; logo?: string }) => void;
   disabled: boolean;
+  designMode?: boolean;
 }
 
 const fieldProps = {
@@ -17,7 +18,7 @@ const fieldProps = {
   transition: { duration: 0.3 },
 };
 
-export function BatchConfig({ product, layout, onGenerate, disabled }: Props) {
+export function BatchConfig({ product, layout, onGenerate, disabled, designMode }: Props) {
   const now = new Date();
   const yy = String(now.getFullYear()).slice(2);
   const mm = String(now.getMonth() + 1).padStart(2, '0');
@@ -32,13 +33,15 @@ export function BatchConfig({ product, layout, onGenerate, disabled }: Props) {
   }
 
   function handlePreview() {
-    if (!product || quantity < 1) return;
+    if (quantity < 1) return;
+    if (!product && !designMode) return;
+    const dummyProduct = product || { id: '', name: '', distributor: '', volume: '', logo_url: '' } as Product;
     const stickers: StickerData[] = [];
     for (let i = 0; i < quantity; i++) {
       const serial = startSerial + i;
       stickers.push({ bt_number: generateBT(serial), serial });
     }
-    onGenerate({ stickers, product });
+    onGenerate({ stickers, product: dummyProduct });
   }
 
   async function handleGenerate() {
@@ -138,9 +141,9 @@ export function BatchConfig({ product, layout, onGenerate, disabled }: Props) {
         <motion.button
           className="flex-1 bg-bg-surface border border-border rounded-xl text-text-primary font-semibold text-sm h-10 hover:bg-bg-sidebar transition-all duration-150 disabled:opacity-40 disabled:pointer-events-none"
           onClick={handlePreview}
-          disabled={disabled}
-          whileHover={disabled ? {} : { scale: 1.03 }}
-          whileTap={disabled ? {} : { scale: 0.97 }}
+          disabled={!product && !designMode}
+          whileHover={!product && !designMode ? {} : { scale: 1.03 }}
+          whileTap={!product && !designMode ? {} : { scale: 0.97 }}
         >
           Preview
         </motion.button>

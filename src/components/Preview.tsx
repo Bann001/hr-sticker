@@ -44,7 +44,8 @@ export function Preview({
   const isDesignMode = designElements !== undefined && designElements.length > 0;
 
   useEffect(() => {
-    if (!visible || !canvasRef.current || !product) return;
+    if (!visible || !canvasRef.current) return;
+    if (!product && !isDesignMode) return;
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d')!;
 
@@ -73,12 +74,12 @@ export function Preview({
           layout.sticker_width_mm, layout.sticker_height_mm,
           PREVIEW_DPI,
           designElements!,
-          product,
+          product as Product,
           pageStickers[i].bt_number,
           logoDataUrl,
         );
       } else {
-        renderSticker(ctx, x, y, layout.sticker_width_mm, layout.sticker_height_mm, PREVIEW_DPI, pageStickers[i], product, fonts, logoDataUrl);
+        renderSticker(ctx, x, y, layout.sticker_width_mm, layout.sticker_height_mm, PREVIEW_DPI, pageStickers[i], product as Product, fonts, logoDataUrl);
       }
     }
 
@@ -166,7 +167,7 @@ export function Preview({
     setDownloading(false);
   }, [product, layout, stickers, fonts, logoDataUrl, isDesignMode, designElements, generatePDFOverride]);
 
-  if (!visible || !product) {
+  if (!visible) {
     return (
       <motion.div
         style={styles.empty}
@@ -174,13 +175,15 @@ export function Preview({
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4 }}
       >
-        <motion.p
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.15 }}
-        >
-          Select a product, configure batch settings, and click <strong>Preview</strong> to begin.
-        </motion.p>
+        {isDesignMode && !product ? (
+          <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.15 }}>
+            Configure batch settings below and click <strong>Preview</strong> to see your design.
+          </motion.p>
+        ) : (
+          <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.15 }}>
+            Select a product, configure batch settings, and click <strong>Preview</strong> to begin.
+          </motion.p>
+        )}
       </motion.div>
     );
   }

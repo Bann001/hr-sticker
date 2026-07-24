@@ -101,7 +101,7 @@ export function TasksPage({
             <ProductSelector product={product} onProductChange={onProductChange} onLogoData={onLogoData} />
           </CardContent></Card>
           <Card><CardContent className="p-0">
-            <BatchConfig product={product} layout={layout} onGenerate={onGenerate} disabled={!product} />
+            <BatchConfig product={product} layout={layout} onGenerate={onGenerate} disabled={!product} designMode={isDesignMode} />
           </CardContent></Card>
           <Card><CardContent className="p-0">
             <FontConfig config={fonts} onChange={onFontsChange} />
