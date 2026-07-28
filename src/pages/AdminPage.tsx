@@ -17,7 +17,7 @@ const allPages = [
 ];
 
 export function AdminPage() {
-  const { isAdmin, pageSettings, togglePageVisibility, createUser, deleteUser } = useAuth();
+  const { isAdmin, pageSettings, togglePageVisibility, createUser, deleteUser, profile, signOut } = useAuth();
   const [users, setUsers] = useState<Profile[]>([]);
   const [showCreateUser, setShowCreateUser] = useState(false);
   const [newEmail, setNewEmail] = useState('');
@@ -73,10 +73,25 @@ export function AdminPage() {
   }
 
   return (
-    <div className="p-6 space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold text-text-primary">Admin Dashboard</h1>
-        <p className="text-sm text-text-secondary mt-1">Manage users and page visibility</p>
+    <div className="p-6 space-y-6 max-w-4xl mx-auto">
+      {/* Header with logout */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold text-text-primary">Admin Dashboard</h1>
+          <p className="text-sm text-text-secondary mt-1">Manage users and page visibility</p>
+        </div>
+        <div className="flex items-center gap-3">
+          <div className="text-sm text-text-muted">{profile?.email}</div>
+          <button
+            onClick={signOut}
+            className="h-9 px-4 bg-bg-surface border border-border rounded-xl text-sm text-text-secondary hover:text-text-primary hover:bg-bg-sidebar transition-all flex items-center gap-2"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" y1="12" x2="9" y2="12" />
+            </svg>
+            Sign Out
+          </button>
+        </div>
       </div>
 
       {/* Tabs */}

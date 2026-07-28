@@ -135,6 +135,17 @@ function AppContent() {
     }
   }
 
+  // Admin view - full screen admin dashboard only
+  if (isAdmin) {
+    return (
+      <div className="flex h-screen bg-bg-primary overflow-hidden">
+        <div className="flex-1 overflow-auto">
+          <AdminPage />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex h-screen bg-bg-primary overflow-hidden">
       <NavSidebar activeTab={navTab} onTabChange={setNavTab} />
