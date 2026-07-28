@@ -1,6 +1,20 @@
 -- Supabase Auth Schema for Sticker Lab
 -- Run this in Supabase SQL Editor
 
+-- Admin check function (bypasses RLS via SECURITY DEFINER)
+CREATE OR REPLACE FUNCTION public.is_admin()
+RETURNS BOOLEAN
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+BEGIN
+  RETURN EXISTS (
+    SELECT 1 FROM public.profiles
+    WHERE id = auth.uid() AND role = 'admin'
+  );
+END;
+$$;
+
 -- Profiles table (extends auth.users)
 CREATE TABLE IF NOT EXISTS profiles (
   id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
@@ -15,19 +29,13 @@ CREATE POLICY "Users can read own profile" ON profiles
   FOR SELECT USING (auth.uid() = id);
 
 CREATE POLICY "Admins can read all profiles" ON profiles
-  FOR SELECT USING (
-    EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
-  );
+  FOR SELECT USING (public.is_admin());
 
 CREATE POLICY "Admins can insert profiles" ON profiles
-  FOR INSERT WITH CHECK (
-    EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
-  );
+  FOR INSERT WITH CHECK (public.is_admin());
 
 CREATE POLICY "Admins can delete profiles" ON profiles
-  FOR DELETE USING (
-    EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
-  );
+  FOR DELETE USING (public.is_admin());
 
 -- Auto-create profile on user creation
 CREATE OR REPLACE FUNCTION public.handle_new_user()
@@ -56,14 +64,10 @@ CREATE POLICY "Anyone can read page settings" ON page_settings
   FOR SELECT USING (true);
 
 CREATE POLICY "Admins can update page settings" ON page_settings
-  FOR UPDATE USING (
-    EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
-  );
+  FOR UPDATE USING (public.is_admin());
 
 CREATE POLICY "Admins can insert page settings" ON page_settings
-  FOR INSERT WITH CHECK (
-    EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
-  );
+  FOR INSERT WITH CHECK (public.is_admin());
 
 -- Seed default page settings
 INSERT INTO page_settings (page_id, visible) VALUES
@@ -79,18 +83,3 @@ INSERT INTO page_settings (page_id, visible) VALUES
   ('analytics', true),
   ('settings', true)
 ON CONFLICT (page_id) DO NOTHING;
-
--- First admin setup (replace email with yours):
--- INSERT INTO auth.users (
---   instance_id, id, aud, role, email, encrypted_password,
---   email_confirmed_at, created_at, updated_at
--- ) VALUES (
---   '00000000-0000-0000-0000-000000000000',
---   gen_random_uuid(),
---   'authenticated',
---   'authenticated',
---   'admin@stickerlab.com',
---   crypt('admin123', gen_salt('bf')),
---   now(), now(), now()
--- );
--- UPDATE profiles SET role = 'admin' WHERE email = 'admin@stickerlab.com';

@@ -30,7 +30,7 @@ function AppContent() {
   const [startInGenerate, setStartInGenerate] = useState(false);
 
   const isAdmin = profile?.role === 'admin';
-  const [navTab, setNavTab] = useState('tasks');
+  const [navTab, setNavTab] = useState(isAdmin ? 'admin' : 'home');
 
   useEffect(() => {
     if (profile && isAdmin) {
