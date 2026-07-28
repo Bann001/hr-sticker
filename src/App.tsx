@@ -18,7 +18,7 @@ import { LoginPage } from './pages/LoginPage';
 import { AdminPage } from './pages/AdminPage';
 
 function AppContent() {
-  const { user, profile, loading } = useAuth();
+  const { user, profile, loading, refreshProfile } = useAuth();
   const [product, setProduct] = useState<Product | null>(null);
   const [layout, setLayout] = useState<LayoutConfigType>(DEFAULT_LAYOUT);
   const [fonts, setFonts] = useState<FontConfigType>(DEFAULT_FONTS);
@@ -30,13 +30,20 @@ function AppContent() {
   const [startInGenerate, setStartInGenerate] = useState(false);
 
   const isAdmin = profile?.role === 'admin';
-  const [navTab, setNavTab] = useState(isAdmin ? 'admin' : 'tasks');
+  const [navTab, setNavTab] = useState('tasks');
 
   useEffect(() => {
-    if (profile && isAdmin && navTab === 'tasks') {
+    if (profile && isAdmin) {
       setNavTab('admin');
     }
-  }, [profile, isAdmin, navTab]);
+  }, [profile, isAdmin]);
+
+  // Force profile refresh on mount to pick up DB changes
+  useEffect(() => {
+    if (user) {
+      refreshProfile();
+    }
+  }, [user, refreshProfile]);
 
   const handleGenerate = useCallback(
     (data: { stickers: StickerData[]; product: Product; logo?: string }) => {
