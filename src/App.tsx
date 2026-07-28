@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import type { Product, LayoutConfig as LayoutConfigType, StickerData, FontConfig as FontConfigType, DesignElement } from './types';
 import { DEFAULT_LAYOUT, DEFAULT_FONTS } from './types';
 import { AuthProvider, useAuth } from './lib/auth';
@@ -18,7 +18,7 @@ import { LoginPage } from './pages/LoginPage';
 import { AdminPage } from './pages/AdminPage';
 
 function AppContent() {
-  const { user, loading } = useAuth();
+  const { user, profile, loading } = useAuth();
   const [product, setProduct] = useState<Product | null>(null);
   const [layout, setLayout] = useState<LayoutConfigType>(DEFAULT_LAYOUT);
   const [fonts, setFonts] = useState<FontConfigType>(DEFAULT_FONTS);
@@ -29,7 +29,14 @@ function AppContent() {
   const [loadDesignId, setLoadDesignId] = useState<string | null>(null);
   const [startInGenerate, setStartInGenerate] = useState(false);
 
-  const [navTab, setNavTab] = useState('tasks');
+  const isAdmin = profile?.role === 'admin';
+  const [navTab, setNavTab] = useState(isAdmin ? 'admin' : 'tasks');
+
+  useEffect(() => {
+    if (profile && isAdmin && navTab === 'tasks') {
+      setNavTab('admin');
+    }
+  }, [profile, isAdmin, navTab]);
 
   const handleGenerate = useCallback(
     (data: { stickers: StickerData[]; product: Product; logo?: string }) => {
