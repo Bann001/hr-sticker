@@ -1,6 +1,7 @@
 import { cn } from '../../lib/utils';
+import { useAuth } from '../../lib/auth';
 
-export const navItems = [
+export const navItems: Array<{ id: string; label: string; icon: string; selected?: boolean; version?: string; badge?: string }> = [
   { id: 'home', label: 'Home', icon: 'LayoutDashboard' },
   { id: 'create', label: 'Create', icon: 'PenTool' },
   { id: 'projects', label: 'Projects', icon: 'FolderKanban' },
@@ -15,6 +16,16 @@ export const navItems = [
 ];
 
 export function NavSidebar({ activeTab, onTabChange }: { activeTab: string; onTabChange: (tab: string) => void }) {
+  const { profile, isAdmin, pageSettings, signOut } = useAuth();
+
+  const visibleItems = navItems.filter(item => {
+    if (isAdmin) return true;
+    const setting = pageSettings.find(p => p.page_id === item.id);
+    return setting?.visible ?? true;
+  });
+
+  const adminItem = { id: 'admin', label: 'Admin', icon: 'Shield' };
+
   return (
     <aside className="w-[250px] min-w-[250px] bg-bg-sidebar flex flex-col h-full rounded-r-[20px] border-r border-border overflow-hidden">
       {/* Logo area */}
@@ -36,7 +47,7 @@ export function NavSidebar({ activeTab, onTabChange }: { activeTab: string; onTa
 
       {/* Navigation */}
       <nav className="flex-1 px-3 py-2 space-y-0.5 overflow-y-auto">
-        {navItems.map((item) => {
+        {visibleItems.map((item) => {
           const isActive = item.id === activeTab;
           return (
             <button
@@ -67,18 +78,45 @@ export function NavSidebar({ activeTab, onTabChange }: { activeTab: string; onTa
             </button>
           );
         })}
+
+        {/* Admin link */}
+        {isAdmin && (
+          <button
+            onClick={() => onTabChange('admin')}
+            className={cn(
+              'w-full h-11 flex items-center gap-3 px-3 rounded-xl text-sm font-medium transition-all duration-150 ease-out',
+              activeTab === 'admin'
+                ? 'bg-accent text-selected-text'
+                : 'text-text-secondary hover:text-text-primary hover:bg-bg-surface',
+            )}
+          >
+            <NavIcon name="Shield" className="w-[18px] h-[18px] shrink-0" />
+            <span className="flex-1 text-left">Admin</span>
+          </button>
+        )}
       </nav>
 
-      {/* Bottom area */}
+      {/* Bottom area - User info + Logout */}
       <div className="px-3 py-4 border-t border-border">
-        <div className="flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-bg-surface transition-colors duration-150 cursor-pointer">
+        <div className="flex items-center gap-3 px-3 py-2">
           <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-accent/40 to-accent/10 flex items-center justify-center text-xs font-bold text-accent">
-            S
+            {profile?.email?.charAt(0).toUpperCase() || 'U'}
           </div>
           <div className="flex-1 min-w-0">
-            <div className="text-sm font-medium text-text-primary truncate">Sticker Workspace</div>
-            <div className="text-[11px] text-text-muted">Free plan</div>
+            <div className="text-sm font-medium text-text-primary truncate">{profile?.email || 'User'}</div>
+            <div className="text-[11px] text-text-muted">{profile?.role === 'admin' ? 'Admin' : 'User'}</div>
           </div>
+          <button
+            onClick={signOut}
+            className="w-8 h-8 rounded-lg flex items-center justify-center text-text-muted hover:text-danger hover:bg-danger/5 transition-all"
+            title="Sign out"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+              <polyline points="16 17 21 12 16 7" />
+              <line x1="21" y1="12" x2="9" y2="12" />
+            </svg>
+          </button>
         </div>
       </div>
     </aside>
@@ -110,6 +148,8 @@ function NavIcon({ name, className }: { name: string; className?: string }) {
       return <svg {...s}><line x1="12" y1="20" x2="12" y2="10" /><line x1="18" y1="20" x2="18" y2="4" /><line x1="6" y1="20" x2="6" y2="16" /></svg>;
     case 'Settings':
       return <svg {...s}><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" /></svg>;
+    case 'Shield':
+      return <svg {...s}><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></svg>;
     default:
       return <svg {...s}><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" /></svg>;
   }

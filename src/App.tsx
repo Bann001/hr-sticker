@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import type { Product, LayoutConfig as LayoutConfigType, StickerData, FontConfig as FontConfigType, DesignElement } from './types';
 import { DEFAULT_LAYOUT, DEFAULT_FONTS } from './types';
+import { AuthProvider, useAuth } from './lib/auth';
 import { NavSidebar } from './components/ui/sidebar';
 import { StickerDesigner } from './components/StickerDesigner';
 import { TasksPage } from './pages/TasksPage';
@@ -13,8 +14,11 @@ import { FilesPage } from './pages/Files';
 import { TeamsPage } from './pages/Teams';
 import { AnalyticsPage } from './pages/Analytics';
 import { SettingsPage } from './pages/Settings';
+import { LoginPage } from './pages/LoginPage';
+import { AdminPage } from './pages/AdminPage';
 
-export default function App() {
+function AppContent() {
+  const { user, loading } = useAuth();
   const [product, setProduct] = useState<Product | null>(null);
   const [layout, setLayout] = useState<LayoutConfigType>(DEFAULT_LAYOUT);
   const [fonts, setFonts] = useState<FontConfigType>(DEFAULT_FONTS);
@@ -49,7 +53,26 @@ export default function App() {
     setNavTab(tab);
   }, []);
 
-  const isDesignMode = designElements !== null && designElements.length > 0;
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-bg-primary flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-10 h-10 rounded-xl bg-accent flex items-center justify-center mx-auto mb-3 animate-pulse">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#111111" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
+              <polyline points="10 17 15 12 10 7" />
+              <line x1="15" y1="12" x2="3" y2="12" />
+            </svg>
+          </div>
+          <p className="text-sm text-text-muted">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <LoginPage />;
+  }
 
   function renderPage() {
     switch (navTab) {
@@ -98,6 +121,8 @@ export default function App() {
         return <AnalyticsPage />;
       case 'settings':
         return <SettingsPage />;
+      case 'admin':
+        return <AdminPage />;
       default:
         return <DashboardPage />;
     }
@@ -113,5 +138,13 @@ export default function App() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function App() {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
   );
 }
