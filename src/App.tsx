@@ -11,6 +11,7 @@ import { TicketsPage } from './pages/Tickets';
 import { ChatPage } from './pages/Chat';
 import { ChatBuddyPage } from './pages/ChatBuddy';
 import { FilesPage } from './pages/Files';
+import { RpuStickersPage } from './pages/RpuStickers';
 import { TeamsPage } from './pages/Teams';
 import { AnalyticsPage } from './pages/Analytics';
 import { SettingsPage } from './pages/Settings';
@@ -129,6 +130,8 @@ function AppContent() {
         return <ChatBuddyPage />;
       case 'files':
         return <FilesPage />;
+      case 'rpu-stickers':
+        return <RpuStickersPage />;
       case 'teams':
         return <TeamsPage />;
       case 'analytics':

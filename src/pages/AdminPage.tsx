@@ -8,6 +8,7 @@ const allPages = [
   { id: 'projects', label: 'Projects' },
   { id: 'tickets', label: 'Tickets' },
   { id: 'tasks', label: 'Tasks' },
+  { id: 'rpu-stickers', label: 'RPU Sticker' },
   { id: 'chat', label: 'Chat' },
   { id: 'chat-buddy', label: 'Chat Buddy' },
   { id: 'files', label: 'My Files' },

@@ -76,6 +76,7 @@ INSERT INTO page_settings (page_id, visible) VALUES
   ('projects', true),
   ('tickets', false),
   ('tasks', true),
+  ('rpu-stickers', true),
   ('chat', true),
   ('chat-buddy', true),
   ('files', true),
