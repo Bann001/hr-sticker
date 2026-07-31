@@ -1,23 +1,25 @@
 import { useState, useEffect } from 'react';
 import { cn } from '../lib/utils';
 import { supabase } from '../supabase';
+import { loadRuns } from '../utils/rpuRuns';
 
 interface DashboardStats {
   designs: number;
   batches: number;
   products: number;
   totalStickers: number;
+  rpuRuns: number;
 }
 
 interface Activity {
-  type: 'design' | 'batch';
+  type: 'design' | 'batch' | 'rpu';
   message: string;
   time: string;
   created_at: string;
 }
 
 export function DashboardPage() {
-  const [stats, setStats] = useState<DashboardStats>({ designs: 0, batches: 0, products: 0, totalStickers: 0 });
+  const [stats, setStats] = useState<DashboardStats>({ designs: 0, batches: 0, products: 0, totalStickers: 0, rpuRuns: 0 });
   const [recent, setRecent] = useState<Activity[]>([]);
 
   useEffect(() => {
@@ -30,11 +32,14 @@ export function DashboardPage() {
 
       const totalStickers = (batchesRes.data || []).reduce((sum, b) => sum + (b.quantity || 0), 0);
 
+      const rpuRuns = loadRuns();
+
       setStats({
         designs: designsRes.count || 0,
         batches: batchesRes.count || 0,
         products: productsRes.count || 0,
         totalStickers,
+        rpuRuns: rpuRuns.length,
       });
 
       // Recent activity
@@ -67,6 +72,15 @@ export function DashboardPage() {
             created_at: d.created_at,
           });
         }
+      }
+
+      for (const r of rpuRuns.slice(0, 5)) {
+        activities.push({
+          type: 'rpu',
+          message: `Printed ${r.quantity}× ${r.brand} ${r.name} stickers`,
+          time: timeAgo(r.startedAt),
+          created_at: r.startedAt,
+        });
       }
 
       activities.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
@@ -104,11 +118,11 @@ export function DashboardPage() {
       ),
     },
     {
-      label: 'Saved Designs',
-      value: stats.designs,
+      label: 'RPU Runs',
+      value: stats.rpuRuns,
       icon: (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" /><polyline points="17 21 17 13 7 13 7 21" /><polyline points="7 3 7 8 15 8" />
+          <path d="M12 2L2 7l10 5 10-5-10-5z" /><path d="M2 17l10 5 10-5" /><path d="M2 12l10 5 10-5" />
         </svg>
       ),
     },
@@ -154,7 +168,8 @@ export function DashboardPage() {
                 <div key={i} className="flex items-center gap-4 px-5 py-4 hover:bg-white/[0.02] transition-colors">
                   <div className={cn(
                     'w-2 h-2 rounded-full shrink-0',
-                    activity.type === 'batch' ? 'bg-accent' : 'bg-success',
+                    activity.type === 'batch' ? 'bg-accent' :
+                    activity.type === 'rpu' ? 'bg-sky-500' : 'bg-success',
                   )} />
                   <p className="flex-1 text-sm text-text-primary">{activity.message}</p>
                   <span className="text-xs text-text-muted shrink-0">{activity.time}</span>

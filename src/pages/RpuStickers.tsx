@@ -6,6 +6,8 @@ import { saveLogoToLibrary } from '../components/SavedLogos';
 import { SavedLogos } from '../components/SavedLogos';
 import { RpuLayoutCanvas } from '../components/RpuLayoutCanvas';
 import { generateRpuPdf } from '../utils/rpuPdf';
+import { saveRun, loadRuns } from '../utils/rpuRuns';
+import type { RpuRun } from '../utils/rpuRuns';
 
 const STORAGE = 'rpu-assets';
 
@@ -139,6 +141,17 @@ export function RpuStickersPage() {
     setDownloading(true);
     try {
       await new Promise(r => setTimeout(r, 30));
+      const run: RpuRun = {
+        id: Date.now().toString(),
+        brand: effectiveDrone.brand,
+        name: effectiveDrone.name,
+        stickerW,
+        stickerH,
+        quantity: positions.length,
+        startedAt: new Date().toISOString(),
+        serialBase,
+      };
+      saveRun(run);
       const blob = generateRpuPdf(effectiveDrone, positions.map(s => ({ serial: s.serial, xMm: s.xMm, yMm: s.yMm, logoUrl: s.logoUrl })));
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -150,7 +163,7 @@ export function RpuStickersPage() {
       console.error(err);
     }
     setDownloading(false);
-  }, [effectiveDrone, positions]);
+  }, [effectiveDrone, positions, stickerW, stickerH, serialBase]);
 
   const hasPositions = positions.some(s => s.xMm > 0 || s.yMm > 0);
   const totalPages = stickerW > 0 && stickerH > 0
