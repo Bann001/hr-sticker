@@ -164,7 +164,6 @@ export function FilesPage() {
     setFolders(next)
     saveFolders(next)
     setNewFolderName('')
-    setShowNewFolder(false)
   }
 
   const handleDeleteFolder = (id: string) => {
@@ -236,9 +235,10 @@ export function FilesPage() {
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-sm font-semibold text-text-primary">Folders</h2>
               <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
-                onClick={() => setShowNewFolder(!showNewFolder)}
-                className="w-7 h-7 rounded-lg bg-accent/10 text-accent flex items-center justify-center text-sm hover:bg-accent/20 transition-colors">
-                +
+                onClick={() => setShowNewFolder(true)}
+                className="h-7 px-2.5 text-[11px] font-medium rounded-lg bg-accent/10 text-accent flex items-center gap-1 hover:bg-accent/20 transition-colors">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+                New
               </motion.button>
             </div>
 
@@ -248,25 +248,34 @@ export function FilesPage() {
                   initial={{ opacity: 0, height: 0 }}
                   animate={{ opacity: 1, height: 'auto' }}
                   exit={{ opacity: 0, height: 0 }}
+                  transition={{ duration: 0.2 }}
                   onSubmit={handleCreateFolder}
                   className="mb-3 overflow-hidden"
                 >
-                  <input
-                    type="text"
-                    value={newFolderName}
-                    onChange={e => setNewFolderName(e.target.value)}
-                    placeholder="Folder name..."
-                    className="h-9 px-3 text-sm bg-bg-primary border border-border rounded-xl text-text-primary w-full outline-none focus:border-accent transition-colors"
-                    autoFocus
-                  />
+                  <div className="flex gap-2 mb-2">
+                    <input
+                      type="text"
+                      value={newFolderName}
+                      onChange={e => setNewFolderName(e.target.value)}
+                      placeholder="Folder name..."
+                      className="flex-1 h-9 px-3 text-sm bg-bg-primary border border-border rounded-xl text-text-primary w-full outline-none focus:border-accent transition-colors"
+                      autoFocus
+                    />
+                    <motion.button whileTap={{ scale: 0.95 }}
+                      type="submit"
+                      className="h-9 px-3 text-xs bg-accent text-selected-text rounded-xl font-medium">
+                      Add
+                    </motion.button>
+                  </div>
                 </motion.form>
               )}
             </AnimatePresence>
 
+            {showNewFolder === false && folders.length === 0 && (
+              <p className="text-xs text-text-muted text-center py-8">No folders yet. Click + New to create one.</p>
+            )}
+
             <div className="flex-1 overflow-y-auto space-y-2">
-              {folders.length === 0 && (
-                <p className="text-xs text-text-muted text-center py-8">No folders yet. Create one to organize your assets.</p>
-              )}
               {folders.map(folder => (
                 <motion.div
                   key={folder.id}
