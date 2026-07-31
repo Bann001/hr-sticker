@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback, useRef } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '../lib/utils';
 import { droneLibrary, type DroneModel } from '../lib/drones';
 import { saveLogoToLibrary } from '../components/SavedLogos';
@@ -8,6 +8,8 @@ import { RpuLayoutCanvas } from '../components/RpuLayoutCanvas';
 import { generateRpuPdf } from '../utils/rpuPdf';
 import { saveRun, loadRuns } from '../utils/rpuRuns';
 import type { RpuRun } from '../utils/rpuRuns';
+import { saveDesign as saveDesignToSupabase, loadDesigns as loadDesignsFromSupabase } from '../lib/designs';
+import type { DesignElement } from '../types';
 
 const STORAGE = 'rpu-assets';
 
@@ -42,6 +44,26 @@ interface StickerSlot {
   logoUrl?: string;
 }
 
+const pageVariants = {
+  initial: { opacity: 0, y: 12 },
+  animate: { opacity: 1, y: 0, transition: { duration: 0.35 } },
+};
+
+const panelVariants = {
+  initial: { opacity: 0, x: -16 },
+  animate: { opacity: 1, x: 0, transition: { duration: 0.3 } },
+};
+
+const cardVars = {
+  initial: { opacity: 0, y: 8 },
+  animate: { opacity: 1, y: 0, transition: { duration: 0.22 } },
+};
+
+const gridCard = {
+  hidden: { opacity: 0, scale: 0.95 },
+  visible: { opacity: 1, scale: 1, transition: { duration: 0.2 } },
+};
+
 export function RpuStickersPage() {
   const [droneId, setDroneId] = useState(droneLibrary[0].id);
   const [useCustomSize, setUseCustomSize] = useState(false);
@@ -50,10 +72,14 @@ export function RpuStickersPage() {
   const [serialBase, setSerialBase] = useState('RPU-P60-0001');
   const [quantity, setQuantity] = useState(15);
   const [logoDataUrl, setLogoDataUrl] = useState<string | undefined>();
-  const [downloading, setDownloading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [savedDesigns, setSavedDesigns] = useState<any[]>([]);
   const [uploading, setUploading] = useState(false);
   const [selectedLogoId, setSelectedLogoId] = useState<string | null>(null);
   const [assets, setAssets] = useState<RpuAsset[]>(loadAssets);
+  const [downloading, setDownloading] = useState(false);
+  const [designName, setDesignName] = useState('RPU-Sticker-Batch');
 
   const [positions, setPositions] = useState<StickerSlot[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -136,6 +162,30 @@ export function RpuStickersPage() {
     e.target.value = '';
   }, []);
 
+  const handleSaveDesign = useCallback(async () => {
+    if (positions.length === 0) return;
+    setSaving(true);
+    try {
+      const elements: DesignElement[] = [{
+        id: 'rpu-meta',
+        type: 'custom',
+        xMm: 0, yMm: 0, widthMm: stickerW, heightMm: stickerH,
+        fontSize: 12, fontFamily: 'Space Grotesk', color: '#0f172a',
+        align: 'left', bold: false,
+        content: JSON.stringify({
+          droneId, projectType: 'rpu', stickerW, stickerH,
+          positions: positions.map(s => ({ serial: s.serial, xMm: s.xMm, yMm: s.yMm })),
+          logo: logoDataUrl || '',
+        }),
+      }];
+      await saveDesignToSupabase(designName, elements, logoDataUrl, 'rpu');
+      setSavedDesigns(await loadDesignsFromSupabase());
+      setSaved(true);
+      setTimeout(() => setSaved(false), 1500);
+    } catch {}
+    setSaving(false);
+  }, [positions, stickerW, stickerH, droneId, designName, logoDataUrl]);
+
   const handleDownload = useCallback(async () => {
     if (positions.length === 0) return;
     setDownloading(true);
@@ -171,19 +221,29 @@ export function RpuStickersPage() {
     : 0;
 
   return (
-    <div className="flex-1 min-w-0 overflow-y-auto bg-bg-primary">
+    <motion.div
+      className="flex-1 min-w-0 overflow-y-auto bg-bg-primary"
+      variants={pageVariants}
+      initial="initial"
+      animate="animate"
+    >
       <div className="max-w-6xl mx-auto p-8">
-        <div className="mb-6">
+        <motion.div className="mb-6" variants={cardVars}>
           <h1 className="text-2xl font-bold text-text-primary tracking-tight">
             RPU <span className="text-accent">Sticker Generator</span>
           </h1>
           <p className="text-sm text-text-muted mt-1">Drag stickers on the A4 sheet to arrange them, then download the PDF.</p>
-        </div>
+        </motion.div>
 
         <div className="grid grid-cols-1 lg:grid-cols-[340px_1fr] gap-5">
           {/* Config panel */}
-          <div className="bg-bg-surface border border-border rounded-2xl p-5 space-y-4 overflow-y-auto max-h-[calc(100vh-160px)]">
-            <div>
+          <motion.div className="bg-bg-surface border border-border rounded-2xl p-5 space-y-4 overflow-y-auto max-h-[calc(100vh-160px)]"
+            variants={panelVariants}
+            initial="initial"
+            animate="animate"
+            transition={{ staggerChildren: 0.04 }}
+          >
+            <motion.div variants={cardVars}>
               <label className="text-xs font-medium text-text-muted uppercase tracking-wider block mb-1.5">Drone Model</label>
               <select value={droneId} onChange={e => setDroneId(e.target.value)}
                 className="h-10 px-3 text-sm bg-bg-primary border border-border rounded-xl text-text-primary w-full outline-none focus:border-accent transition-colors appearance-none">
@@ -201,77 +261,121 @@ export function RpuStickersPage() {
                   <span className="text-[10px] text-text-muted ml-1">Custom</span>
                 </label>
               </div>
-              {useCustomSize && (
-                <div className="flex gap-2 mt-2">
-                  <div className="flex-1">
-                    <label className="text-[10px] text-text-muted block mb-0.5">Width (mm)</label>
-                    <input type="number" min={20} max={200} value={customW} onChange={e => setCustomW(Math.max(20, Math.min(200, parseInt(e.target.value) || 20)))}
-                      className="h-8 px-2 text-sm bg-bg-primary border border-border rounded-lg text-text-primary w-full outline-none focus:border-accent font-mono" />
-                  </div>
-                  <div className="flex-1">
-                    <label className="text-[10px] text-text-muted block mb-0.5">Height (mm)</label>
-                    <input type="number" min={10} max={200} value={customH} onChange={e => setCustomH(Math.max(10, Math.min(200, parseInt(e.target.value) || 10)))}
-                      className="h-8 px-2 text-sm bg-bg-primary border border-border rounded-lg text-text-primary w-full outline-none focus:border-accent font-mono" />
-                  </div>
-                </div>
-              )}
-              <p className="text-[11px] text-accent mt-1">Active sticker size: {stickerW}×{stickerH} mm</p>
-            </div>
+              <AnimatePresence>
+                {useCustomSize && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    transition={{ duration: 0.2 }}
+                    className="flex gap-2 mt-2 overflow-hidden"
+                  >
+                    <div className="flex-1">
+                      <label className="text-[10px] text-text-muted block mb-0.5">Width (mm)</label>
+                      <input type="number" min={20} max={200} value={customW} onChange={e => setCustomW(Math.max(20, Math.min(200, parseInt(e.target.value) || 20)))}
+                        className="h-8 px-2 text-sm bg-bg-primary border border-border rounded-lg text-text-primary w-full outline-none focus:border-accent font-mono" />
+                    </div>
+                    <div className="flex-1">
+                      <label className="text-[10px] text-text-muted block mb-0.5">Height (mm)</label>
+                      <input type="number" min={10} max={200} value={customH} onChange={e => setCustomH(Math.max(10, Math.min(200, parseInt(e.target.value) || 10)))}
+                        className="h-8 px-2 text-sm bg-bg-primary border border-border rounded-lg text-text-primary w-full outline-none focus:border-accent font-mono" />
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+              <motion.p className="text-[11px] text-accent mt-1" key={stickerW + 'x' + stickerH}>
+                Active sticker size: {stickerW}×{stickerH} mm
+              </motion.p>
+            </motion.div>
 
-            <div>
+            <motion.div variants={cardVars}>
               <label className="text-xs font-medium text-text-muted uppercase tracking-wider block mb-1.5">Serial Number</label>
               <input type="text" value={serialBase} onChange={e => setSerialBase(e.target.value)}
                 placeholder="RPU-P60-0001"
                 className="h-10 px-3 text-sm bg-bg-primary border border-border rounded-xl text-text-primary w-full outline-none focus:border-accent transition-colors font-mono" />
-            </div>
+            </motion.div>
 
-            <div>
+            <motion.div variants={cardVars}>
               <label className="text-xs font-medium text-text-muted uppercase tracking-wider block mb-1.5">Quantity</label>
               <input type="number" min={1} max={200} value={quantity} onChange={e => setQuantity(Math.max(1, Math.min(200, parseInt(e.target.value) || 1)))}
                 className="h-10 px-3 text-sm bg-bg-primary border border-border rounded-xl text-text-primary w-full outline-none focus:border-accent transition-colors" />
-            </div>
+            </motion.div>
 
             {/* Logo / Asset */}
-            <div>
+            <motion.div variants={cardVars}>
               <label className="text-xs font-medium text-text-muted uppercase tracking-wider block mb-1.5">Logo / Asset</label>
               <div className="flex gap-2">
                 <input type="file" accept="image/*" onChange={handleUploadLogo} className="hidden" ref={fileInputRef} />
-                <button onClick={() => fileInputRef.current?.click()}
+                <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+                  onClick={() => fileInputRef.current?.click()}
                   className={cn('flex-1 h-9 px-3 text-xs bg-bg-primary border border-dashed border-border rounded-xl text-text-secondary hover:text-text-primary hover:border-accent/40 transition-colors flex items-center justify-center gap-1.5', uploading && 'opacity-60')}>
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
                   Upload
-                </button>
+                </motion.button>
                 <SavedLogos onSelect={(url) => { setLogoDataUrl(url); setSelectedLogoId(url); }} />
               </div>
-              {assets.length > 0 && (
-                <div className="flex flex-wrap gap-1.5 mt-2">
-                  {assets.map(a => (
-                    <motion.img key={a.id} src={a.dataUrl} alt={a.name}
-                      className={cn('w-8 h-8 rounded-lg object-cover border cursor-pointer', logoDataUrl === a.dataUrl ? 'border-accent ring-2 ring-accent/30' : 'border-border hover:border-accent/40')}
-                      onClick={() => { setLogoDataUrl(a.dataUrl); setSelectedLogoId(a.dataUrl); }}
-                      whileHover={{ scale: 1.1 }}
-                      title={a.name}
-                    />
-                  ))}
-                </div>
-              )}
-            </div>
+              <AnimatePresence>
+                {assets.length > 0 && (
+                  <motion.div className="flex flex-wrap gap-1.5 mt-2"
+                    initial={{ opacity: 0, y: -6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -6 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    {assets.map(a => (
+                      <motion.img key={a.id} src={a.dataUrl} alt={a.name}
+                        className={cn('w-8 h-8 rounded-lg object-cover border cursor-pointer', logoDataUrl === a.dataUrl ? 'border-accent ring-2 ring-accent/30' : 'border-border hover:border-accent/40')}
+                        onClick={() => { setLogoDataUrl(a.dataUrl); setSelectedLogoId(a.dataUrl); }}
+                        whileHover={{ scale: 1.15 }}
+                        whileTap={{ scale: 0.95 }}
+                        title={a.name}
+                      />
+                    ))}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </motion.div>
 
             {/* Layout actions */}
-            <div className="flex gap-2">
-              <button onClick={addToSheet}
+            <motion.div className="flex gap-2" variants={cardVars}>
+              <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+                onClick={addToSheet}
                 className="flex-1 h-9 px-3 text-xs bg-bg-primary border border-border rounded-xl text-text-secondary hover:text-text-primary hover:border-accent/40 transition-colors flex items-center justify-center gap-1.5">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
                 Grid Layout
-              </button>
-              <button onClick={() => { setPositions([]); setSelectedId(null); }}
+              </motion.button>
+              <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+                onClick={() => { setPositions([]); setSelectedId(null); }}
                 className="flex-1 h-9 px-3 text-xs bg-bg-primary border border-border rounded-xl text-text-secondary hover:text-text-primary hover:border-accent/40 transition-colors flex items-center justify-center gap-1.5">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
                 Clear
-              </button>
-            </div>
+              </motion.button>
+            </motion.div>
 
-            <button onClick={handleDownload} disabled={downloading || positions.length === 0}
+            <motion.button whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }}
+              onClick={handleSaveDesign} disabled={saving || positions.length === 0}
+              className={cn('w-full h-11 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 transition-all mb-2 border border-border',
+                saving || positions.length === 0 ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-bg-primary text-text-primary hover:bg-bg-primary/80')}>
+              {saving ? (
+                <>
+                  <svg className="animate-spin" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+                  Saving...
+                </>
+              ) : saved ? (
+                <>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 6L9 17l-5-5"/></svg>
+                  Saved
+                </>
+              ) : (
+                <>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/></svg>
+                  Save Design
+                </>
+              )}
+            </motion.button>
+
+            <motion.button whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }}
+              onClick={handleDownload} disabled={downloading || positions.length === 0}
               className={cn('w-full h-11 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 transition-all',
                 downloading || positions.length === 0 ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-accent text-selected-text hover:opacity-90')}>
               {downloading ? (
@@ -285,11 +389,16 @@ export function RpuStickersPage() {
                   Download PDF ({positions.length} sticker{positions.length !== 1 ? 's' : ''})
                 </>
               )}
-            </button>
-          </div>
+            </motion.button>
+          </motion.div>
 
           {/* Layout canvas */}
-          <div className="space-y-3">
+          <motion.div className="space-y-3"
+            variants={panelVariants}
+            initial="initial"
+            animate="animate"
+            transition={{ delay: 0.1 }}
+          >
             <div className="flex items-center justify-between">
               <div>
                 <h2 className="text-sm font-semibold text-text-primary">Page Layout</h2>
@@ -300,14 +409,15 @@ export function RpuStickersPage() {
                   <span className="text-[11px] text-text-muted">{positions.length} stickers · ~{totalPages} page{totalPages > 1 ? 's' : ''}</span>
                 )}
                 {!hasPositions && positions.length > 0 && (
-                  <button onClick={addToSheet} className="text-xs text-accent hover:underline">Add all to sheet</button>
+                  <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
+                    onClick={addToSheet} className="text-xs text-accent hover:underline">Add all to sheet</motion.button>
                 )}
               </div>
             </div>
             <RpuLayoutCanvas drone={effectiveDrone} stickers={positions} onMove={onMove} onSelect={onSelect} selectedId={selectedId} />
-          </div>
+          </motion.div>
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 }

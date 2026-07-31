@@ -197,7 +197,7 @@ export function StickerDesigner({ onUseDesign, loadDesignId, onLoadDesignIdConsu
 
   async function saveDesign() {
     if (elements.length === 0) return;
-    await saveDesignToSupabase(designName, elements, logoDataUrl);
+    await saveDesignToSupabase(designName, elements, logoDataUrl, 'create');
     setSavedDesigns(await loadDesigns());
     setSaved(true);
     setTimeout(() => setSaved(false), 1500);
@@ -227,6 +227,7 @@ export function StickerDesigner({ onUseDesign, loadDesignId, onLoadDesignIdConsu
       name: designName,
       elements,
       logo_url: logoDataUrl,
+      project_type: 'create',
       created_at: new Date().toISOString(),
     };
     onUseDesign(design);

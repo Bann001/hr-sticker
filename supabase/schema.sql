@@ -4,6 +4,7 @@ CREATE TABLE designs (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL,
   elements JSONB NOT NULL DEFAULT '[]'::jsonb,
+  project_type TEXT NOT NULL DEFAULT 'create',
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
