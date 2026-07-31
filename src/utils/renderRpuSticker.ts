@@ -11,6 +11,7 @@ export function renderRpuSticker(
   dpi: number,
   drone: DroneModel,
   serial: string,
+  logoDataUrl?: string,
 ) {
   const pmm = dpi / 25.4;
   const ppt = dpi / 72;
@@ -27,7 +28,6 @@ export function renderRpuSticker(
   ctx.fillRect(0, 0, 2.5 * pmm, hMm * pmm);
 
   const pad = 5;
-  const cx = wMm / 2;
   const textLeft = pad + 1.5;
 
   // RPU badge (top-left)
@@ -74,6 +74,24 @@ export function renderRpuSticker(
   ctx.textAlign = 'left';
   ctx.textBaseline = 'alphabetic';
   ctx.fillText('S/N', textLeft * pmm, (hMm - 1.6) * pmm);
+
+  // Logo if present
+  if (logoDataUrl) {
+    try {
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.src = logoDataUrl;
+      const logoW = Math.min(hMm * 0.35, badgeW);
+      const logoH = logoW;
+      ctx.drawImage(
+        img,
+        (wMm - badgeW - 1) * pmm,
+        1 * pmm,
+        logoW * pmm,
+        logoH * pmm,
+      );
+    } catch {}
+  }
 }
 
 function roundRect(

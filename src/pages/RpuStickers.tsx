@@ -1,68 +1,129 @@
-import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
+import { useState, useMemo, useCallback, useRef } from 'react';
+import { motion } from 'framer-motion';
 import { cn } from '../lib/utils';
 import { droneLibrary, type DroneModel } from '../lib/drones';
-import { renderRpuSticker } from '../utils/renderRpuSticker';
+import { saveLogoToLibrary } from '../components/SavedLogos';
+import { SavedLogos } from '../components/SavedLogos';
+import { RpuLayoutCanvas } from '../components/RpuLayoutCanvas';
 import { generateRpuPdf } from '../utils/rpuPdf';
 
-const PREVIEW_SCALE = 2;
+const STORAGE = 'rpu-assets';
+
+interface RpuAsset {
+  id: string;
+  name: string;
+  dataUrl: string;
+}
+
+function loadAssets(): RpuAsset[] {
+  try { return JSON.parse(localStorage.getItem(STORAGE) || '[]'); } catch { return []; }
+}
+
+function saveAsset(asset: RpuAsset) {
+  const all = loadAssets();
+  if (all.some(a => a.dataUrl === asset.dataUrl)) return;
+  all.push(asset);
+  while (all.length > 30) all.shift();
+  localStorage.setItem(STORAGE, JSON.stringify(all));
+}
+
+function deleteAsset(id: string) {
+  const next = loadAssets().filter(a => a.id !== id);
+  localStorage.setItem(STORAGE, JSON.stringify(next));
+}
+
+interface StickerSlot {
+  id: string;
+  xMm: number;
+  yMm: number;
+  serial: string;
+  logoUrl?: string;
+}
 
 export function RpuStickersPage() {
   const [droneId, setDroneId] = useState(droneLibrary[0].id);
-  const [serial, setSerial] = useState('RPU-P60-0001');
-  const [quantity, setQuantity] = useState(10);
+  const [serialBase, setSerialBase] = useState('RPU-P60-0001');
+  const [quantity, setQuantity] = useState(15);
+  const [logoDataUrl, setLogoDataUrl] = useState<string | undefined>();
   const [downloading, setDownloading] = useState(false);
-  const previewCanvasRef = useRef<HTMLCanvasElement>(null);
+  const [showLogos, setShowLogos] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [selectedLogoId, setSelectedLogoId] = useState<string | null>(null);
+  const [assets, setAssets] = useState<RpuAsset[]>(loadAssets());
 
-  const drone = useMemo(
-    () => droneLibrary.find(d => d.id === droneId) ?? droneLibrary[0],
-    [droneId],
-  );
+  const [positions, setPositions] = useState<StickerSlot[]>([]);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
-    if (droneId !== 'xag-p60') {
-      setSerial(prev => {
-        const match = prev.match(/^RPU-[A-Z0-9]+-(\d{4})$/);
-        if (match) {
-          const code = droneId.split('-').map(p => p.charAt(0)).join('').toUpperCase();
-          return `RPU-${code}-${match[1]}`;
-        }
-        return prev;
-      });
-    }
-  }, [droneId]);
+  const drone = useMemo(() => droneLibrary.find(d => d.id === droneId) ?? droneLibrary[0], [droneId]);
 
-  const stickerData = useMemo(() => {
-    const list: Array<{ serial: string }> = [];
-    const base = serial.trim();
+  const slots = useMemo<StickerSlot[]>(() => {
+    const list: StickerSlot[] = [];
+    const base = serialBase.trim();
     const seqMatch = base.match(/^(.*?)(\d+)$/);
     for (let i = 0; i < quantity; i++) {
-      let s = base;
+      let serial = base;
       if (seqMatch && quantity > 1) {
         const prefix = seqMatch[1];
         const num = parseInt(seqMatch[2], 10);
         const width = seqMatch[2].length;
-        s = `${prefix}${String(num + i).padStart(width, '0')}`;
+        serial = `${prefix}${String(num + i).padStart(width, '0')}`;
       }
-      list.push({ serial: s });
+      list.push({ id: `s-${i}`, xMm: 0, yMm: 0, serial, logoUrl: logoDataUrl });
     }
     return list;
-  }, [serial, quantity]);
+  }, [serialBase, quantity, drone, logoDataUrl]);
 
-  useEffect(() => {
-    const canvas = previewCanvasRef.current;
-    if (!canvas) return;
-    const dpi = 144;
-    canvas.width = Math.ceil(drone.stickerWidthMm * dpi / 25.4);
-    canvas.height = Math.ceil(drone.stickerHeightMm * dpi / 25.4);
-    const ctx = canvas.getContext('2d')!;
-    renderRpuSticker(ctx, drone.stickerWidthMm, drone.stickerHeightMm, dpi, drone, stickerData[0].serial);
-  }, [drone, stickerData]);
+  const onMove = useCallback((id: string, xMm: number, yMm: number) => {
+    setPositions(prev => prev.map(s => s.id === id ? { ...s, xMm, yMm } : s));
+  }, []);
+
+  const onSelect = useCallback((id: string) => {
+    setSelectedId(prev => prev === id ? null : id);
+  }, []);
+
+  const addToSheet = useCallback(() => {
+    const perRow = Math.max(1, Math.floor(210 / drone.stickerWidthMm));
+    const pad = 10;
+    const gap = 4;
+    const next: StickerSlot[] = [];
+    for (let i = 0; i < slots.length; i++) {
+      const row = Math.floor(i / perRow);
+      const col = i % perRow;
+      const xMm = pad + col * (drone.stickerWidthMm + gap);
+      const yMm = pad + row * (drone.stickerHeightMm + gap);
+      next.push({ ...slots[i], xMm: Math.min(xMm, 210 - drone.stickerWidthMm), yMm: Math.min(yMm, 297 - drone.stickerHeightMm) });
+    }
+    setPositions(next);
+  }, [slots, drone]);
+
+  const handleUploadLogo = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      const dataUrl = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+      const asset: RpuAsset = { id: Date.now().toString(), name: file.name.replace(/\.[^.]+$/, ''), dataUrl };
+      saveAsset(asset);
+      setAssets(loadAssets());
+      saveLogoToLibrary(dataUrl, file.name.replace(/\.[^.]+$/, ''));
+      setLogoDataUrl(dataUrl);
+    } catch {}
+    setUploading(false);
+    e.target.value = '';
+  }, []);
 
   const handleDownload = useCallback(async () => {
+    if (positions.length === 0) return;
     setDownloading(true);
     try {
-      await new Promise(r => setTimeout(r, 50));
-      const blob = generateRpuPdf(drone, stickerData);
+      await new Promise(r => setTimeout(r, 30));
+      const blob = generateRpuPdf(drone, positions.map(s => ({ serial: s.serial, xMm: s.xMm, yMm: s.yMm, logoUrl: s.logoUrl })));
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -70,139 +131,121 @@ export function RpuStickersPage() {
       a.click();
       URL.revokeObjectURL(url);
     } catch (err) {
-      console.error('RPU PDF generation failed:', err);
+      console.error(err);
     }
     setDownloading(false);
-  }, [drone, stickerData]);
+  }, [drone, positions]);
+
+  const hasPositions = positions.some(s => s.xMm > 0 || s.yMm > 0);
 
   return (
     <div className="flex-1 min-w-0 overflow-y-auto bg-bg-primary">
-      <div className="max-w-5xl mx-auto p-8">
-        <div className="mb-8">
+      <div className="max-w-6xl mx-auto p-8">
+        <div className="mb-6">
           <h1 className="text-2xl font-bold text-text-primary tracking-tight">
             RPU <span className="text-accent">Sticker Generator</span>
           </h1>
-          <p className="text-sm text-text-muted mt-1">
-            Generate identification stickers for your drones. Each drone model uses its own sticker size.
-          </p>
+          <p className="text-sm text-text-muted mt-1">Drag stickers on the A4 sheet to arrange them, then download the PDF.</p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-[330px_1fr] gap-5">
           {/* Config panel */}
-          <div className="bg-bg-surface border border-border rounded-2xl p-5 space-y-5">
+          <div className="bg-bg-surface border border-border rounded-2xl p-5 space-y-4 overflow-y-auto max-h-[calc(100vh-160px)]">
             <div>
-              <label className="text-xs font-medium text-text-muted uppercase tracking-wider block mb-1.5">
-                Drone Model
-              </label>
-              <select
-                value={droneId}
-                onChange={e => setDroneId(e.target.value)}
-                className="h-11 px-3.5 text-sm bg-bg-primary border border-border rounded-xl text-text-primary w-full outline-none focus:border-accent transition-colors appearance-none"
-              >
+              <label className="text-xs font-medium text-text-muted uppercase tracking-wider block mb-1.5">Drone Model</label>
+              <select value={droneId} onChange={e => setDroneId(e.target.value)}
+                className="h-10 px-3 text-sm bg-bg-primary border border-border rounded-xl text-text-primary w-full outline-none focus:border-accent transition-colors appearance-none">
                 {droneLibrary.map(d => (
-                  <option key={d.id} value={d.id}>
-                    {d.brand} {d.name} — {d.stickerWidthMm}×{d.stickerHeightMm} mm sticker
-                  </option>
+                  <option key={d.id} value={d.id}>{d.brand} {d.name}</option>
                 ))}
               </select>
-              <p className="text-xs text-text-muted mt-2">
-                {drone.dims} · {drone.weight} · sticker {drone.stickerWidthMm}×{drone.stickerHeightMm} mm
-              </p>
+              <p className="text-[11px] text-text-muted mt-1.5">{drone.dims} · {drone.weight} · Sticker {drone.stickerWidthMm}×{drone.stickerHeightMm}mm</p>
             </div>
 
             <div>
-              <label className="text-xs font-medium text-text-muted uppercase tracking-wider block mb-1.5">
-                Serial Number
-              </label>
-              <input
-                type="text"
-                value={serial}
-                onChange={e => setSerial(e.target.value)}
+              <label className="text-xs font-medium text-text-muted uppercase tracking-wider block mb-1.5">Serial Number</label>
+              <input type="text" value={serialBase} onChange={e => setSerialBase(e.target.value)}
                 placeholder="RPU-P60-0001"
-                className="h-11 px-3.5 text-sm bg-bg-primary border border-border rounded-xl text-text-primary w-full outline-none focus:border-accent transition-colors font-mono"
-              />
-              <p className="text-xs text-text-muted mt-2">
-                Sequential serials auto-increment from the trailing number when quantity &gt; 1.
-              </p>
+                className="h-10 px-3 text-sm bg-bg-primary border border-border rounded-xl text-text-primary w-full outline-none focus:border-accent transition-colors font-mono" />
             </div>
 
             <div>
-              <label className="text-xs font-medium text-text-muted uppercase tracking-wider block mb-1.5">
-                Quantity
-              </label>
-              <input
-                type="number"
-                min={1}
-                max={500}
-                value={quantity}
-                onChange={e => setQuantity(Math.max(1, Math.min(500, parseInt(e.target.value) || 1)))}
-                className="h-11 px-3.5 text-sm bg-bg-primary border border-border rounded-xl text-text-primary w-full outline-none focus:border-accent transition-colors"
-              />
+              <label className="text-xs font-medium text-text-muted uppercase tracking-wider block mb-1.5">Quantity</label>
+              <input type="number" min={1} max={200} value={quantity} onChange={e => setQuantity(Math.max(1, Math.min(200, parseInt(e.target.value) || 1)))}
+                className="h-10 px-3 text-sm bg-bg-primary border border-border rounded-xl text-text-primary w-full outline-none focus:border-accent transition-colors" />
             </div>
 
-            <button
-              onClick={handleDownload}
-              disabled={downloading || stickerData.length === 0}
-              className={cn(
-                'w-full h-12 rounded-xl bg-accent text-selected-text text-sm font-semibold flex items-center justify-center gap-2 transition-all',
-                downloading ? 'opacity-60 cursor-not-allowed' : 'hover:opacity-90',
+            {/* Logo / Asset */}
+            <div>
+              <label className="text-xs font-medium text-text-muted uppercase tracking-wider block mb-1.5">Logo / Asset</label>
+              <div className="flex gap-2">
+                <input type="file" accept="image/*" onChange={handleUploadLogo} className="hidden" ref={fileInputRef} />
+                <button onClick={() => fileInputRef.current?.click()}
+                  className={cn('flex-1 h-9 px-3 text-xs bg-bg-primary border border-dashed border-border rounded-xl text-text-secondary hover:text-text-primary hover:border-accent/40 transition-colors flex items-center justify-center gap-1.5', uploading && 'opacity-60')}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                  Upload
+                </button>
+                <SavedLogos onSelect={(url) => { setLogoDataUrl(url); setSelectedLogoId(url); }} />
+              </div>
+              {assets.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 mt-2">
+                  {assets.map(a => (
+                    <motion.img key={a.id} src={a.dataUrl} alt={a.name}
+                      className={cn('w-8 h-8 rounded-lg object-cover border cursor-pointer', logoDataUrl === a.dataUrl ? 'border-accent ring-2 ring-accent/30' : 'border-border hover:border-accent/40')}
+                      onClick={() => { setLogoDataUrl(a.dataUrl); setSelectedLogoId(a.dataUrl); }}
+                      whileHover={{ scale: 1.1 }}
+                      title={a.name}
+                    />
+                  ))}
+                </div>
               )}
-            >
+            </div>
+
+            {/* Layout actions */}
+            <div className="flex gap-2">
+              <button onClick={addToSheet} className="flex-1 h-9 px-3 text-xs bg-bg-primary border border-border rounded-xl text-text-secondary hover:text-text-primary hover:border-accent/40 transition-colors flex items-center justify-center gap-1.5">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+                Grid Layout
+              </button>
+              <button onClick={() => { setPositions([]); setSelectedId(null); }}
+                className="flex-1 h-9 px-3 text-xs bg-bg-primary border border-border rounded-xl text-text-secondary hover:text-text-primary hover:border-accent/40 transition-colors flex items-center justify-center gap-1.5">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                Clear
+              </button>
+            </div>
+
+            <button onClick={handleDownload} disabled={downloading || positions.length === 0}
+              className={cn('w-full h-11 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 transition-all',
+                downloading || positions.length === 0 ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-accent text-selected-text hover:opacity-90')}>
               {downloading ? (
                 <>
-                  <svg className="animate-spin" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-                    <path d="M21 12a9 9 0 1 1-6.219-8.56" />
-                  </svg>
+                  <svg className="animate-spin" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
                   Generating...
                 </>
               ) : (
                 <>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                    <polyline points="7 10 12 15 17 10" />
-                    <line x1="12" y1="15" x2="12" y2="3" />
-                  </svg>
-                  Download PDF ({stickerData.length} stickers)
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                  Download PDF ({positions.length} stickers)
                 </>
               )}
             </button>
           </div>
 
-          {/* Preview panel */}
-          <div className="bg-bg-surface border border-border rounded-2xl p-5 space-y-4">
-            <div>
-              <h2 className="text-sm font-semibold text-text-primary mb-1">Live Preview</h2>
-              <p className="text-xs text-text-muted">
-                First sticker of {stickerData.length} · actual sticker size {drone.stickerWidthMm}×{drone.stickerHeightMm} mm
-              </p>
-            </div>
-
-            <div className="bg-bg-primary rounded-xl p-6 flex items-center justify-center overflow-x-auto">
-              <canvas
-                ref={previewCanvasRef}
-                style={{
-                  width: drone.stickerWidthMm * PREVIEW_SCALE,
-                  height: drone.stickerHeightMm * PREVIEW_SCALE,
-                  maxWidth: '100%',
-                  imageRendering: 'auto',
-                }}
-                className="rounded shadow-sm"
-              />
-            </div>
-
-            <div>
-              <h3 className="text-sm font-semibold text-text-primary mb-2">Serial list</h3>
-              <div className="bg-bg-primary rounded-xl p-3 max-h-40 overflow-y-auto font-mono text-xs text-text-secondary">
-                {stickerData.slice(0, 50).map((s, i) => (
-                  <div key={i} className="py-0.5">
-                    {i + 1}. {s.serial}
-                  </div>
-                ))}
-                {stickerData.length > 50 && (
-                  <div className="py-0.5 text-text-muted">… and {stickerData.length - 50} more</div>
+          {/* Layout canvas */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-sm font-semibold text-text-primary">Page Layout</h2>
+                <p className="text-xs text-text-muted">Drag sticker markers to arrange them on the A4 sheet</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-[11px] text-text-muted">{positions.length} / {slots.length}</span>
+                {!hasPositions && (
+                  <button onClick={addToSheet} className="text-xs text-accent hover:underline">Add all to sheet</button>
                 )}
               </div>
             </div>
+            <RpuLayoutCanvas drone={drone} stickers={positions} onMove={onMove} onSelect={onSelect} selectedId={selectedId} />
           </div>
         </div>
       </div>
