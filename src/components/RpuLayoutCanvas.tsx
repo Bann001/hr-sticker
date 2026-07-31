@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { cn } from '../lib/utils';
 import type { DroneModel } from '../lib/drones';
 
@@ -20,14 +20,51 @@ interface RpuLayoutCanvasProps {
 const A4_W = 210;
 const A4_H = 297;
 
+function StickerMarker({ slot, drone, isSelected, isDrag, onPointerDown }: {
+  slot: StickerSlot;
+  drone: DroneModel;
+  isSelected: boolean;
+  isDrag: boolean;
+  onPointerDown: (e: React.PointerEvent) => void;
+}) {
+  return (
+    <div
+      onPointerDown={onPointerDown}
+      className={cn(
+        'absolute z-10 cursor-move select-none rounded shadow transition-shadow',
+        isDrag ? 'shadow-xl opacity-90' : 'hover:shadow-md',
+        isSelected ? 'ring-2 ring-accent ring-offset-1' : '',
+      )}
+      style={{ left: 0, top: 0 }}
+    >
+      <div className="w-full h-full bg-white rounded flex flex-col items-center justify-center p-1 overflow-hidden border"
+        style={{ borderColor: isSelected ? '#0ea5e9' : '#d0d5dd', borderWidth: 1 }}
+      >
+        <div className="flex items-center gap-1 mb-0.5">
+          <span className="text-[7px] font-bold text-sky-600 bg-sky-50 rounded px-1 py-px leading-none">RPU</span>
+        </div>
+        <span className="text-[9px] font-semibold text-gray-800 leading-tight text-center truncate w-full">{drone.brand} {drone.name}</span>
+        <span className="text-[7px] font-mono text-sky-500 leading-tight text-center truncate w-full">{slot.serial}</span>
+      </div>
+      {isSelected && (
+        <div className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-accent rounded-full flex items-center justify-center shadow text-white text-[8px]">
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M12 5v14M5 12h14"/></svg>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function RpuLayoutCanvas({ drone, stickers, onMove, onSelect, selectedId }: RpuLayoutCanvasProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const scaleRef = useRef(1);
-  const [dragId, setDragId] = useState<string | null>(null);
-  const dragOffset = useRef({ dxPx: 0, dyPx: 0 });
-  const dragStartMm = useRef({ x: 0, y: 0 });
+  const sheetRectRef = useRef<{ left: number; top: number; width: number; height: number } | null>(null);
+  const rafRef = useRef<number>(0);
 
-  const updateScale = useCallback(() => {
+  const [dragId, setDragId] = useState<string | null>(null);
+  const dragOffset = useRef({ dxMm: 0, dyMm: 0 });
+
+  useLayoutEffect(() => {
     const el = containerRef.current;
     if (!el) return;
     const maxW = el.clientWidth - 16;
@@ -35,48 +72,58 @@ export function RpuLayoutCanvas({ drone, stickers, onMove, onSelect, selectedId 
     const fromW = Math.min(maxW, 480);
     const fromH = fromW * (A4_H / A4_W);
     if (fromH > maxH) {
-      const scaleByH = maxH / fromH;
       scaleRef.current = Math.min(maxW / A4_W, maxH / A4_H);
     } else {
       scaleRef.current = fromW / A4_W;
     }
   }, []);
 
-  const posToPixel = (mm: number) => mm * scaleRef.current;
-  const pixelToMm = (px: number) => px / scaleRef.current;
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(() => {
+      cancelAnimationFrame(rafRef.current);
+      rafRef.current = requestAnimationFrame(() => {
+        const r = el.getBoundingClientRect();
+        sheetRectRef.current = { left: r.left, top: r.top, width: r.width, height: r.height };
+      });
+    });
+    if (containerRef.current) {
+      ro.observe(containerRef.current);
+      sheetRectRef.current = containerRef.current.getBoundingClientRect();
+    }
+    return () => { ro.disconnect(); cancelAnimationFrame(rafRef.current); };
+  }, []);
+
+  const posToPixel = useCallback((mm: number) => mm * scaleRef.current, []);
+  const pixelToMmFn = useCallback((px: number) => px / scaleRef.current, []);
 
   const onPointerDown = useCallback((e: React.PointerEvent, slot: StickerSlot) => {
-    const el = e.currentTarget as HTMLElement;
-    const box = el.getBoundingClientRect();
+    const box = (e.target as HTMLElement).getBoundingClientRect();
     const mx = e.clientX - box.left;
     const my = e.clientY - box.top;
-    dragOffset.current = { dxPx: mx, dyPx: my };
-    dragStartMm.current = { x: slot.xMm, y: slot.yMm };
+    if (!sheetRectRef.current) return;
+    dragOffset.current = {
+      dxMm: pixelToMmFn(mx + sheetRectRef.current.left),
+      dyMm: pixelToMmFn(my + sheetRectRef.current.top),
+    };
     setDragId(slot.id);
     onSelect?.(slot.id);
     e.preventDefault();
-  }, [onSelect]);
+  }, [onSelect, pixelToMmFn]);
 
   const onPointerMove = useCallback((e: React.PointerEvent) => {
-    if (!dragId) return;
-    const el = containerRef.current;
-    if (!el) return;
-    const sheetRect = el.querySelector('.a4-sheet')?.getBoundingClientRect();
-    if (!sheetRect) return;
-    const mx = e.clientX - sheetRect.left - dragOffset.current.dxPx;
-    const my = e.clientY - sheetRect.top - dragOffset.current.dyPx;
-    let xMm = pixelToMm(mx);
-    let yMm = pixelToMm(my);
-    xMm = Math.max(0, Math.min(A4_W - drone.stickerWidthMm, xMm));
-    yMm = Math.max(0, Math.min(A4_H - drone.stickerHeightMm, yMm));
+    if (!dragId || !sheetRectRef.current) return;
+    const mx = e.clientX - sheetRectRef.current.left;
+    const my = e.clientY - sheetRectRef.current.top;
+    const xMm = Math.max(0, Math.min(A4_W - drone.stickerWidthMm, pixelToMmFn(mx) - dragOffset.current.dxMm));
+    const yMm = Math.max(0, Math.min(A4_H - drone.stickerHeightMm, pixelToMmFn(my) - dragOffset.current.dyMm));
     onMove(dragId, xMm, yMm);
-  }, [dragId, drone, pixelToMm]);
+  }, [dragId, drone, onMove, pixelToMmFn]);
 
   const onPointerUp = useCallback(() => {
     setDragId(null);
   }, []);
-
-  updateScale();
 
   const sheetW = A4_W * scaleRef.current;
   const sheetH = A4_H * scaleRef.current;
@@ -100,28 +147,15 @@ export function RpuLayoutCanvas({ drone, stickers, onMove, onSelect, selectedId 
           const isDrag = dragId === slot.id;
           return (
             <div key={slot.id}
-              onPointerDown={(e) => onPointerDown(e, slot)}
-              className={cn(
-                'absolute z-10 cursor-move select-none rounded shadow transition-shadow',
-                isDrag ? 'shadow-xl opacity-90' : 'hover:shadow-md',
-                isSelected ? 'ring-2 ring-accent ring-offset-1' : '',
-              )}
-              style={{ left: l, top: t, width: w, height: h }}
+              style={{ position: 'absolute', left: l, top: t, width: w, height: h }}
             >
-              <div className="w-full h-full bg-white rounded flex flex-col items-center justify-center p-1 overflow-hidden border"
-                style={{ borderColor: isSelected ? '#0ea5e9' : '#d0d5dd', borderWidth: 1 }}
-              >
-                <div className="flex items-center gap-1 mb-0.5">
-                  <span className="text-[7px] font-bold text-sky-600 bg-sky-50 rounded px-1 py-px leading-none">RPU</span>
-                </div>
-                <span className="text-[9px] font-semibold text-gray-800 leading-tight text-center truncate w-full">{drone.brand} {drone.name}</span>
-                <span className="text-[7px] font-mono text-sky-500 leading-tight text-center truncate w-full">{slot.serial}</span>
-              </div>
-              {isSelected && (
-                <div className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-accent rounded-full flex items-center justify-center shadow text-white text-[8px]">
-                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M12 5v14M5 12h14"/></svg>
-                </div>
-              )}
+              <StickerMarker
+                slot={slot}
+                drone={drone}
+                isSelected={isSelected}
+                isDrag={isDrag}
+                onPointerDown={(e) => onPointerDown(e, slot)}
+              />
             </div>
           );
         })}
