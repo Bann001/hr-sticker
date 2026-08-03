@@ -76,28 +76,13 @@ export const RpuLayoutCanvas = ({ drone, stickers, onMove, onSelect, selectedId 
   const dragOffRef = useRef({ dx: 0, dy: 0 });
   const rafRef = useRef<number>(0);
   const pendingPosRef = useRef<{ id: string; xMm: number; yMm: number } | null>(null);
+  const dimsRef = useRef({ w: drone.stickerWidthMm, h: drone.stickerHeightMm });
+  dimsRef.current = { w: drone.stickerWidthMm, h: drone.stickerHeightMm };
 
   useEffect(() => {
     setScale(computeScale(containerRef.current));
-    scaleRef.current = scale;
+    scaleRef.current = computeScale(containerRef.current);
   }, []);
-
-  const onMarkerPointerDown = useCallback((e: React.PointerEvent, slot: StickerSlot) => {
-    const sheetEl = sheetRef.current;
-    if (!sheetEl) return;
-    e.preventDefault();
-    e.stopPropagation();
-    const sheetRect = sheetEl.getBoundingClientRect();
-    const markerEl = e.currentTarget as HTMLElement;
-    const markerRect = markerEl.getBoundingClientRect();
-    const s = scaleRef.current;
-    dragOffRef.current = {
-      dx: (e.clientX - sheetRect.left - markerRect.left) / s - slot.xMm,
-      dy: (e.clientY - sheetRect.top - markerRect.top) / s - slot.yMm,
-    };
-    dragIdRef.current = slot.id;
-    onSelect?.(slot.id);
-  }, [onSelect]);
 
   const tick = useCallback(() => {
     if (pendingPosRef.current && dragIdRef.current) {
@@ -115,29 +100,42 @@ export const RpuLayoutCanvas = ({ drone, stickers, onMove, onSelect, selectedId 
     }
   }, [tick]);
 
-  useEffect(() => {
-    function onMove(e: PointerEvent) {
-      if (!dragIdRef.current || !sheetRef.current) return;
-      const sheetRect = sheetRef.current.getBoundingClientRect();
-      const s = scaleRef.current;
-      const mx = e.clientX - sheetRect.left;
-      const my = e.clientY - sheetRect.top;
-      const xMm = Math.max(0, Math.min(A4_W - drone.stickerWidthMm, mx / s + dragOffRef.current.dx));
-      const yMm = Math.max(0, Math.min(A4_H - drone.stickerHeightMm, my / s + dragOffRef.current.dy));
-      scheduleMove(dragIdRef.current!, xMm, yMm);
-    }
-    function onUp() {
-      dragIdRef.current = null;
-    }
-    if (dragIdRef.current) {
-      window.addEventListener('pointermove', onMove);
-      window.addEventListener('pointerup', onUp);
-    }
-    return () => {
-      window.removeEventListener('pointermove', onMove);
-      window.removeEventListener('pointerup', onUp);
+  const handlePointerMove = useCallback((e: PointerEvent) => {
+    if (!dragIdRef.current || !sheetRef.current) return;
+    const sheetRect = sheetRef.current.getBoundingClientRect();
+    const s = scaleRef.current;
+    const { w, h } = dimsRef.current;
+    const mx = e.clientX - sheetRect.left;
+    const my = e.clientY - sheetRect.top;
+    const xMm = Math.max(0, Math.min(A4_W - w, mx / s + dragOffRef.current.dx));
+    const yMm = Math.max(0, Math.min(A4_H - h, my / s + dragOffRef.current.dy));
+    scheduleMove(dragIdRef.current!, xMm, yMm);
+  }, [scheduleMove]);
+
+  const handlePointerUp = useCallback(() => {
+    dragIdRef.current = null;
+    window.removeEventListener('pointermove', handlePointerMove);
+    window.removeEventListener('pointerup', handlePointerUp);
+  }, [handlePointerMove]);
+
+  const onMarkerPointerDown = useCallback((e: React.PointerEvent, slot: StickerSlot) => {
+    const sheetEl = sheetRef.current;
+    if (!sheetEl) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const sheetRect = sheetEl.getBoundingClientRect();
+    const markerEl = e.currentTarget as HTMLElement;
+    const markerRect = markerEl.getBoundingClientRect();
+    const s = scaleRef.current;
+    dragOffRef.current = {
+      dx: (e.clientX - sheetRect.left - markerRect.left) / s - slot.xMm,
+      dy: (e.clientY - sheetRect.top - markerRect.top) / s - slot.yMm,
     };
-  }, [drone, scheduleMove]);
+    dragIdRef.current = slot.id;
+    onSelect?.(slot.id);
+    window.addEventListener('pointermove', handlePointerMove);
+    window.addEventListener('pointerup', handlePointerUp);
+  }, [onSelect, handlePointerMove, handlePointerUp]);
 
   return (
     <div className="flex-1 bg-bg-primary rounded-xl border border-border p-4 flex items-center justify-center overflow-hidden"
