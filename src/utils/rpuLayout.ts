@@ -142,7 +142,49 @@ function findSpot(size: LabelSize, freeRects: FreeRect[]): FreeRect | null {
   return best;
 }
 
-/** Pack `count` stickers across one or more A4 pages. */
+/** Pack a single uniform size into a clean grid layout. */
+export function packPageGrid(
+  size: LabelSize,
+  budget: number,
+  serials: string[],
+  startIdx: number,
+): PlacedSticker[] {
+  const printW = PAGE_W - MARGIN * 2;
+  const printH = PAGE_H - MARGIN * 2;
+  const cols = Math.max(1, Math.floor((printW + GAP) / (size.w + GAP)));
+  const rows = Math.max(1, Math.floor((printH + GAP) / (size.h + GAP)));
+  const perPage = Math.min(cols * rows, budget);
+
+  const placed: PlacedSticker[] = [];
+  let serialIdx = 0;
+  const nextSerial = () => (startIdx + serialIdx < serials.length ? serials[startIdx + serialIdx++] : '');
+
+  for (let i = 0; i < perPage; i++) {
+    const col = i % cols;
+    const row = Math.floor(i / cols);
+    placed.push({
+      id: `s-${startIdx + i}`,
+      size,
+      xMm: MARGIN + col * (size.w + GAP),
+      yMm: MARGIN + row * (size.h + GAP),
+      serial: nextSerial(),
+    });
+  }
+  return placed;
+}
+
+/** Pack `count` stickers of a single uniform size across one or more A4 pages. */
+export function packSheetGrid(count: number, size: LabelSize, serials: string[]): PlacedSticker[][] {
+  const pages: PlacedSticker[][] = [];
+  let placed = 0;
+  while (placed < count) {
+    const page = packPageGrid(size, count - placed, serials, placed);
+    if (page.length === 0) break;
+    pages.push(page);
+    placed += page.length;
+  }
+  return pages;
+}
 export function packSheet(count: number, sizes: LabelSize[], serials: string[]): PlacedSticker[][] {
   const pages: PlacedSticker[][] = [];
   let placed = 0;

@@ -9,7 +9,7 @@ import { saveRun } from '../utils/rpuRuns';
 import type { RpuRun } from '../utils/rpuRuns';
 import { saveDesign as saveDesignToSupabase, loadDesigns as loadDesignsFromSupabase } from '../lib/designs';
 import type { DesignElement } from '../types';
-import { LABEL_SIZES, packSheet, breakdown, type PlacedSticker, type LabelSize } from '../utils/rpuLayout';
+import { LABEL_SIZES, packSheet, packSheetGrid, breakdown, type PlacedSticker, type LabelSize } from '../utils/rpuLayout';
 
 const STORAGE = 'rpu-assets';
 
@@ -171,7 +171,11 @@ export function RpuStickersPage() {
 
   const regenerate = useCallback(() => {
     const serials = serialize();
-    setPages(packSheet(quantity, sizesForMode, serials));
+    if (sizesForMode.length === 1) {
+      setPages(packSheetGrid(quantity, sizesForMode[0], serials));
+    } else {
+      setPages(packSheet(quantity, sizesForMode, serials));
+    }
     setCurrentPage(0);
     setSelectedId(null);
   }, [serialize, quantity, sizesForMode]);
