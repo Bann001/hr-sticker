@@ -89,6 +89,61 @@ function gradientClass(kind: FileItem['kind']) {
   }
 }
 
+function FolderGlyph({ className }: { className?: string }) {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className ?? 'text-accent shrink-0'}>
+      <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+    </svg>
+  )
+}
+
+function MoveMenu({ folders, onPick, onCreate, onClose }: {
+  folders: Folder[]
+  onPick: (folderId: string) => void
+  onCreate: (name: string) => void
+  onClose: () => void
+}) {
+  const [name, setName] = useState('')
+  const submit = () => {
+    if (name.trim()) onCreate(name)
+  }
+  return (
+    <>
+      <div className="fixed inset-0 z-40" onClick={onClose} />
+      <div className="absolute right-0 top-8 z-50 w-60 rounded-xl bg-bg-primary border border-border shadow-2xl p-2">
+        <p className="text-[10px] uppercase tracking-wider text-text-muted px-2 pb-1.5">Move to folder</p>
+        <div className="max-h-44 overflow-y-auto space-y-0.5">
+          {folders.length === 0 && (
+            <p className="text-xs text-text-muted px-2 py-2">No folders yet — create one below</p>
+          )}
+          {folders.map(f => (
+            <button
+              key={f.id}
+              onClick={() => onPick(f.id)}
+              className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-left text-sm text-text-primary hover:bg-accent/10 transition-colors"
+            >
+              <FolderGlyph />
+              <span className="truncate flex-1">{f.name}</span>
+              <span className="text-[10px] text-text-muted shrink-0">{f.items.length}</span>
+            </button>
+          ))}
+        </div>
+        <div className="border-t border-border mt-1.5 pt-1.5 flex gap-1.5">
+          <input
+            autoFocus
+            value={name}
+            onChange={e => setName(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter') submit() }}
+            placeholder="New folder…"
+            className="flex-1 min-w-0 h-7 px-2 text-xs bg-bg-surface border border-border rounded-lg text-text-primary outline-none focus:border-accent transition-colors"
+          />
+          <button onClick={submit} className="h-7 px-2 text-xs bg-accent text-selected-text rounded-lg font-medium shrink-0">Add</button>
+        </div>
+      </div>
+    </>
+  )
+}
+
 export function FilesPage() {
   const [activeTab, setActiveTab] = useState<FileCategory>('all')
   const [items, setItems] = useState<FileItem[]>([])
@@ -96,6 +151,7 @@ export function FilesPage() {
   const [showNewFolder, setShowNewFolder] = useState(false)
   const [newFolderName, setNewFolderName] = useState('')
   const [activeFolderId, setActiveFolderId] = useState<string | null>(null)
+  const [moveMenuFor, setMoveMenuFor] = useState<string | null>(null)
   const [designs, setDesigns] = useState<FileItem[]>([])
   const [rpuDesigns, setRpuDesigns] = useState<FileItem[]>([])
 
@@ -149,7 +205,9 @@ export function FilesPage() {
     setFolders(loadFolders())
   }, [])
 
-  const filtered = activeTab === 'all' ? items : items.filter(f => `${f.kind}s` === activeTab)
+  const filedIds = new Set(folders.flatMap(f => f.items.map(i => i.id)))
+  const filtered = (activeTab === 'all' ? items : items.filter(f => `${f.kind}s` === activeTab))
+    .filter(f => !filedIds.has(f.id))
 
   const handleCreateFolder = (e: FormEvent) => {
     e.preventDefault()
@@ -173,7 +231,24 @@ export function FilesPage() {
   }
 
   const handleAddToFolder = (item: FileItem, folderId: string) => {
-    const next = folders.map(f => f.id === folderId ? { ...f, items: [...f.items, item] } : f)
+    const next = folders.map(f => {
+      const contains = f.items.some(i => i.id === item.id)
+      if (f.id === folderId) return contains ? f : { ...f, items: [...f.items, item] }
+      return contains ? { ...f, items: f.items.filter(i => i.id !== item.id) } : f
+    })
+    setFolders(next)
+    saveFolders(next)
+  }
+
+  const handleCreateAndAddToFolder = (item: FileItem, name: string) => {
+    if (!name.trim()) return
+    const folder: Folder = {
+      id: Date.now().toString(),
+      name: name.trim(),
+      items: [item],
+      createdAt: new Date().toISOString(),
+    }
+    const next = [...folders, folder]
     setFolders(next)
     saveFolders(next)
   }
@@ -189,6 +264,11 @@ export function FilesPage() {
     setDesigns(designs.filter(d => d.id !== id))
     setRpuDesigns(rpuDesigns.filter(d => d.id !== id))
     setItems(items.filter(i => i.id !== id))
+    setFolders(folders => {
+      const next = folders.map(f => ({ ...f, items: f.items.filter(i => i.id !== id) }))
+      saveFolders(next)
+      return next
+    })
   }
 
   const activeFolder = activeFolderId ? folders.find(f => f.id === activeFolderId) : null
@@ -330,8 +410,31 @@ export function FilesPage() {
                           <p className="text-sm font-medium text-text-primary truncate">{item.name}</p>
                           <p className="text-[11px] text-text-muted">{item.subtitle}</p>
                         </div>
-                        <button onClick={() => handleRemoveFromFolder(activeFolder.id, item.id)}
-                          className="text-text-muted hover:text-danger text-xs shrink-0">✕</button>
+                        <div className="flex items-center gap-2 shrink-0 relative">
+                          <button
+                            onClick={() => setMoveMenuFor(moveMenuFor === item.id ? null : item.id)}
+                            title="Move to another folder"
+                            className="text-text-muted hover:text-accent transition-colors"
+                          >
+                            <FolderGlyph />
+                          </button>
+                          {moveMenuFor === item.id && (
+                            <MoveMenu
+                              folders={folders.filter(f => f.id !== activeFolder.id)}
+                              onClose={() => setMoveMenuFor(null)}
+                              onPick={(folderId) => {
+                                handleAddToFolder(item, folderId)
+                                setMoveMenuFor(null)
+                              }}
+                              onCreate={(name) => {
+                                handleCreateAndAddToFolder(item, name)
+                                setMoveMenuFor(null)
+                              }}
+                            />
+                          )}
+                          <button onClick={() => handleRemoveFromFolder(activeFolder.id, item.id)}
+                            className="text-text-muted hover:text-danger text-xs">✕</button>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -359,7 +462,7 @@ export function FilesPage() {
               <p className="text-sm text-text-muted py-8 text-center">No create designs yet</p>
             ) : (
               <div className="grid grid-cols-3 gap-4">
-                {designs.map(d => (
+                {designs.filter(d => !filedIds.has(d.id)).map(d => (
                   <motion.div key={d.id} layout
                     initial={{ opacity: 0, y: 8 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -378,8 +481,33 @@ export function FilesPage() {
                     <p className="text-xs text-text-muted mt-1">{d.subtitle}</p>
                     <div className="flex items-center justify-between mt-2 pt-2 border-t border-border">
                       <span className="text-xs text-text-muted">{d.modified}</span>
-                      <button onClick={() => handleDeleteDesign(d.id)}
-                        className="text-xs text-danger/60 hover:text-danger">Delete</button>
+                      <div className="flex items-center gap-2">
+                        <div className="relative">
+                          <button
+                            onClick={() => setMoveMenuFor(moveMenuFor === d.id ? null : d.id)}
+                            title="Move to folder"
+                            className="text-text-muted hover:text-accent transition-colors"
+                          >
+                            <FolderGlyph />
+                          </button>
+                          {moveMenuFor === d.id && (
+                            <MoveMenu
+                              folders={folders}
+                              onClose={() => setMoveMenuFor(null)}
+                              onPick={(folderId) => {
+                                handleAddToFolder(d, folderId)
+                                setMoveMenuFor(null)
+                              }}
+                              onCreate={(name) => {
+                                handleCreateAndAddToFolder(d, name)
+                                setMoveMenuFor(null)
+                              }}
+                            />
+                          )}
+                        </div>
+                        <button onClick={() => handleDeleteDesign(d.id)}
+                          className="text-xs text-danger/60 hover:text-danger">Delete</button>
+                      </div>
                     </div>
                   </motion.div>
                 ))}
@@ -397,7 +525,7 @@ export function FilesPage() {
               <p className="text-sm text-text-muted py-8 text-center">No RPU designs yet</p>
             ) : (
               <div className="grid grid-cols-3 gap-4">
-                {rpuDesigns.map(d => (
+                {rpuDesigns.filter(d => !filedIds.has(d.id)).map(d => (
                   <motion.div key={d.id} layout
                     initial={{ opacity: 0, y: 8 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -416,8 +544,33 @@ export function FilesPage() {
                     <p className="text-xs text-text-muted mt-1">{d.subtitle}</p>
                     <div className="flex items-center justify-between mt-2 pt-2 border-t border-border">
                       <span className="text-xs text-text-muted">{d.modified}</span>
-                      <button onClick={() => handleDeleteDesign(d.id)}
-                        className="text-xs text-danger/60 hover:text-danger">Delete</button>
+                      <div className="flex items-center gap-2">
+                        <div className="relative">
+                          <button
+                            onClick={() => setMoveMenuFor(moveMenuFor === d.id ? null : d.id)}
+                            title="Move to folder"
+                            className="text-text-muted hover:text-accent transition-colors"
+                          >
+                            <FolderGlyph />
+                          </button>
+                          {moveMenuFor === d.id && (
+                            <MoveMenu
+                              folders={folders}
+                              onClose={() => setMoveMenuFor(null)}
+                              onPick={(folderId) => {
+                                handleAddToFolder(d, folderId)
+                                setMoveMenuFor(null)
+                              }}
+                              onCreate={(name) => {
+                                handleCreateAndAddToFolder(d, name)
+                                setMoveMenuFor(null)
+                              }}
+                            />
+                          )}
+                        </div>
+                        <button onClick={() => handleDeleteDesign(d.id)}
+                          className="text-xs text-danger/60 hover:text-danger">Delete</button>
+                      </div>
                     </div>
                   </motion.div>
                 ))}
@@ -462,7 +615,31 @@ export function FilesPage() {
               <p className="text-xs text-text-muted mt-1">{file.subtitle}</p>
               <div className="flex items-center justify-between mt-2 pt-2 border-t border-border">
                 <span className="text-xs text-text-muted">{file.size}</span>
-                <span className="text-xs text-text-muted">{file.modified}</span>
+                <div className="flex items-center gap-2">
+                  <div className="relative">
+                    <button
+                      onClick={() => setMoveMenuFor(moveMenuFor === file.id ? null : file.id)}
+                      title="Move to folder"
+                      className="text-text-muted hover:text-accent transition-colors"
+                    >
+                      <FolderGlyph />
+                    </button>
+                    {moveMenuFor === file.id && (
+                      <MoveMenu
+                        folders={folders}
+                        onClose={() => setMoveMenuFor(null)}
+                        onPick={(folderId) => {
+                          handleAddToFolder(file, folderId)
+                          setMoveMenuFor(null)
+                        }}
+                        onCreate={(name) => {
+                          handleCreateAndAddToFolder(file, name)
+                          setMoveMenuFor(null)
+                        }}
+                      />
+                    )}
+                  </div>
+                </div>
               </div>
             </motion.div>
           ))}
