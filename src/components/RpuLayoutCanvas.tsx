@@ -7,6 +7,13 @@ interface StickerSlot {
   xMm: number;
   yMm: number;
   serial: string;
+  logoUrl?: string;
+}
+
+export interface CanvasView {
+  scale: number;
+  tx: number;
+  ty: number;
 }
 
 interface RpuLayoutCanvasProps {
@@ -15,34 +22,38 @@ interface RpuLayoutCanvasProps {
   onMove: (id: string, xMm: number, yMm: number) => void;
   onSelect?: (id: string) => void;
   selectedId?: string | null;
+  view: CanvasView;
+  onViewChange: (view: CanvasView) => void;
+  logoUrl?: string;
 }
 
 const A4_W = 210;
 const A4_H = 297;
+const MIN_SCALE = 0.2;
+const MAX_SCALE = 4;
+const PAD = 48;
 
-function computeScale(containerEl: HTMLElement | null) {
+function computeBaseScale(containerEl: HTMLElement | null) {
   if (!containerEl) return 1;
-  const maxW = containerEl.clientWidth - 16;
-  const maxH = Math.min(containerEl.clientHeight - 16, 520);
-  const fromW = Math.min(maxW, 480);
-  const fromH = fromW * (A4_H / A4_W);
-  return fromH > maxH ? Math.min(maxW / A4_W, maxH / A4_H) : fromW / A4_W;
+  const maxW = containerEl.clientWidth - PAD * 2;
+  const maxH = containerEl.clientHeight - PAD * 2;
+  if (maxW <= 0 || maxH <= 0) return 1;
+  return Math.max(0.1, Math.min(maxW / A4_W, maxH / A4_H));
 }
 
-function Marker({ slot, drone, scale, isSelected, onPointerDown }: {
+function Marker({ slot, drone, scale, isSelected, onPointerDown, logoUrl }: {
   slot: StickerSlot;
   drone: DroneModel;
   scale: number;
   isSelected: boolean;
   onPointerDown: (e: React.PointerEvent, slot: StickerSlot) => void;
+  logoUrl?: string;
 }) {
+  const src = slot.logoUrl || logoUrl;
   return (
     <div
       onPointerDown={(e) => onPointerDown(e, slot)}
-      className={cn(
-        'absolute z-10 cursor-move select-none rounded shadow',
-        isSelected ? 'ring-2 ring-accent ring-offset-1' : 'hover:shadow-md',
-      )}
+      className="absolute z-10 cursor-move select-none"
       style={{
         left: slot.xMm * scale,
         top: slot.yMm * scale,
@@ -50,38 +61,115 @@ function Marker({ slot, drone, scale, isSelected, onPointerDown }: {
         height: drone.stickerHeightMm * scale,
       }}
     >
-      <div className="w-full h-full bg-white rounded flex flex-col items-center justify-center p-1 overflow-hidden border"
-        style={{ borderColor: isSelected ? '#0ea5e9' : '#d0d5dd', borderWidth: 1 }}>
-        <div className="flex items-center gap-1 mb-0.5">
-          <span className="text-[7px] font-bold text-sky-600 bg-sky-50 rounded px-1 py-px leading-none">RPU</span>
+      <div
+        className={cn(
+          'w-full h-full rounded-[10px] bg-white overflow-hidden',
+          isSelected ? 'ring-[3px] ring-[#FDB515]' : 'border border-black/10',
+        )}
+        style={{ boxShadow: '0 3px 8px rgba(0,0,0,0.4), 0 12px 28px rgba(0,0,0,0.28)' }}
+      >
+        <div className="w-full h-full flex flex-col items-center justify-center px-[4%]">
+          {src && (
+            <img src={src} alt="logo" className="max-h-[26%] max-w-[60%] mb-[2%] object-contain pointer-events-none" draggable={false} />
+          )}
+          <span className="text-[8px] font-bold tracking-wider text-[#0284c7] bg-[#0284c7]/10 rounded px-1 py-px leading-none mb-[2%]">
+            RPU
+          </span>
+          <span className="text-[9px] font-semibold text-neutral-900 leading-tight text-center truncate w-full">
+            {drone.brand} {drone.name}
+          </span>
+          <span className="text-[8px] font-mono text-neutral-500 leading-tight text-center truncate w-full">
+            {slot.serial}
+          </span>
         </div>
-        <span className="text-[9px] font-semibold text-gray-800 leading-tight text-center truncate w-full">{drone.brand} {drone.name}</span>
-        <span className="text-[7px] font-mono text-sky-500 leading-tight text-center truncate w-full">{slot.serial}</span>
+        {isSelected && (
+          <>
+            {(['nw', 'ne', 'sw', 'se'] as const).map(h => (
+              <span
+                key={h}
+                className="absolute w-2.5 h-2.5 bg-[#FDB515] rounded-[3px] border border-white"
+                style={{
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.4)',
+                  ...(h.includes('n') ? { top: -5 } : { bottom: -5 }),
+                  ...(h.includes('w') ? { left: -5 } : { right: -5 }),
+                }}
+              />
+            ))}
+          </>
+        )}
       </div>
-      {isSelected && (
-        <div className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-accent rounded-full flex items-center justify-center shadow text-white text-[8px]">
-          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M12 5v14M5 12h14"/></svg>
-        </div>
-      )}
     </div>
   );
 }
 
-export const RpuLayoutCanvas = ({ drone, stickers, onMove, onSelect, selectedId }: RpuLayoutCanvasProps) => {
+export const RpuLayoutCanvas = ({ drone, stickers, onMove, onSelect, selectedId, view, onViewChange, logoUrl }: RpuLayoutCanvasProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const sheetRef = useRef<HTMLDivElement>(null);
-  const scaleRef = useRef<number>(1);
-  const [scale, setScale] = useState(1);
+  const baseScaleRef = useRef(1);
+  const [baseScale, setBaseScale] = useState(1);
+  const viewRef = useRef(view);
+  viewRef.current = view;
+  const onViewChangeRef = useRef(onViewChange);
+  onViewChangeRef.current = onViewChange;
+
   const dragIdRef = useRef<string | null>(null);
   const dragOffRef = useRef({ dx: 0, dy: 0 });
   const rafRef = useRef<number>(0);
   const pendingPosRef = useRef<{ id: string; xMm: number; yMm: number } | null>(null);
   const dimsRef = useRef({ w: drone.stickerWidthMm, h: drone.stickerHeightMm });
   dimsRef.current = { w: drone.stickerWidthMm, h: drone.stickerHeightMm };
+  const panRef = useRef<{ x: number; y: number; tx: number; ty: number } | null>(null);
 
   useEffect(() => {
-    setScale(computeScale(containerRef.current));
-    scaleRef.current = computeScale(containerRef.current);
+    const update = () => {
+      const s = computeBaseScale(containerRef.current);
+      baseScaleRef.current = s;
+      setBaseScale(s);
+    };
+    update();
+    const ro = new ResizeObserver(update);
+    if (containerRef.current) ro.observe(containerRef.current);
+    return () => ro.disconnect();
+  }, []);
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      const rect = el.getBoundingClientRect();
+      const mx = e.clientX - rect.left;
+      const my = e.clientY - rect.top;
+      const v = viewRef.current;
+      const factor = e.deltaY < 0 ? 1.1 : 1 / 1.1;
+      const ns = Math.min(MAX_SCALE, Math.max(MIN_SCALE, v.scale * factor));
+      const wx = (mx - v.tx) / v.scale;
+      const wy = (my - v.ty) / v.scale;
+      onViewChangeRef.current({ scale: ns, tx: mx - wx * ns, ty: my - wy * ns });
+    };
+    el.addEventListener('wheel', onWheel, { passive: false });
+    return () => el.removeEventListener('wheel', onWheel);
+  }, []);
+
+  const onContainerPointerDown = useCallback((e: React.PointerEvent) => {
+    if (e.target !== e.currentTarget) return;
+    if (e.button !== 0) return;
+    const v = viewRef.current;
+    panRef.current = { x: e.clientX, y: e.clientY, tx: v.tx, ty: v.ty };
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+  }, []);
+
+  const onContainerPointerMove = useCallback((e: React.PointerEvent) => {
+    if (!panRef.current) return;
+    onViewChangeRef.current({
+      ...viewRef.current,
+      tx: panRef.current.tx + (e.clientX - panRef.current.x),
+      ty: panRef.current.ty + (e.clientY - panRef.current.y),
+    });
+  }, []);
+
+  const onContainerPointerUp = useCallback(() => {
+    panRef.current = null;
   }, []);
 
   const tick = useCallback(() => {
@@ -103,7 +191,7 @@ export const RpuLayoutCanvas = ({ drone, stickers, onMove, onSelect, selectedId 
   const handlePointerMove = useCallback((e: PointerEvent) => {
     if (!dragIdRef.current || !sheetRef.current) return;
     const sheetRect = sheetRef.current.getBoundingClientRect();
-    const s = scaleRef.current;
+    const s = baseScaleRef.current * viewRef.current.scale;
     const { w, h } = dimsRef.current;
     const mx = e.clientX - sheetRect.left;
     const my = e.clientY - sheetRect.top;
@@ -126,7 +214,7 @@ export const RpuLayoutCanvas = ({ drone, stickers, onMove, onSelect, selectedId 
     const sheetRect = sheetEl.getBoundingClientRect();
     const markerEl = e.currentTarget as HTMLElement;
     const markerRect = markerEl.getBoundingClientRect();
-    const s = scaleRef.current;
+    const s = baseScaleRef.current * viewRef.current.scale;
     dragOffRef.current = {
       dx: (e.clientX - sheetRect.left - markerRect.left) / s - slot.xMm,
       dy: (e.clientY - sheetRect.top - markerRect.top) / s - slot.yMm,
@@ -138,26 +226,59 @@ export const RpuLayoutCanvas = ({ drone, stickers, onMove, onSelect, selectedId 
   }, [onSelect, handlePointerMove, handlePointerUp]);
 
   return (
-    <div className="flex-1 bg-bg-primary rounded-xl border border-border p-4 flex items-center justify-center overflow-hidden"
+    <div
       ref={containerRef}
-      onPointerLeave={() => { dragIdRef.current = null; }}
-      style={{ minHeight: '300px', touchAction: 'none', position: 'relative' }}
+      className="relative flex-1 overflow-hidden"
+      style={{
+        background: '#424247',
+        backgroundImage: 'radial-gradient(rgba(255,255,255,0.07) 1px, transparent 1px)',
+        backgroundSize: '22px 22px',
+        touchAction: 'none',
+        cursor: 'grab',
+      }}
+      onPointerDown={onContainerPointerDown}
+      onPointerMove={onContainerPointerMove}
+      onPointerUp={onContainerPointerUp}
+      onPointerCancel={onContainerPointerUp}
     >
-      <div ref={sheetRef} className="a4-sheet relative rounded-sm shadow-lg border border-gray-200"
-        style={{ width: drone.stickerWidthMm * scale, height: drone.stickerHeightMm * scale, background: '#fafafa', position: 'relative', maxWidth: '100%' }}>
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0">
-          <span className="text-[9px] text-gray-400 font-mono tracking-wider">A4 &nbsp; 210×297 mm</span>
+      <div
+        className="absolute"
+        style={{
+          left: view.tx,
+          top: view.ty,
+          transform: `scale(${view.scale})`,
+          transformOrigin: '0 0',
+          willChange: 'transform',
+        }}
+      >
+        <div
+          ref={sheetRef}
+          className="relative rounded-[14px]"
+          style={{ width: A4_W * baseScale, height: A4_H * baseScale, background: '#fafafa', boxShadow: '0 6px 16px rgba(0,0,0,0.45), 0 24px 64px rgba(0,0,0,0.5)' }}
+        >
+          <div className="absolute -top-7 left-0 text-[11px] font-medium text-white/50 tracking-wide pointer-events-none">
+            A4 · 210 × 297 mm
+          </div>
+          {stickers.map(slot => (
+            <Marker
+              key={slot.id}
+              slot={slot}
+              drone={drone}
+              scale={baseScale}
+              isSelected={selectedId === slot.id}
+              onPointerDown={onMarkerPointerDown}
+              logoUrl={logoUrl}
+            />
+          ))}
+          {stickers.length === 0 && (
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+              <div className="text-center">
+                <div className="text-[13px] font-medium text-neutral-400">Empty sheet</div>
+                <div className="text-[11px] text-neutral-400/70 mt-1">Click Grid Layout or drag to add stickers</div>
+              </div>
+            </div>
+          )}
         </div>
-        {stickers.map(slot => (
-          <Marker
-            key={slot.id}
-            slot={slot}
-            drone={drone}
-            scale={scale}
-            isSelected={selectedId === slot.id}
-            onPointerDown={onMarkerPointerDown}
-          />
-        ))}
       </div>
     </div>
   );
