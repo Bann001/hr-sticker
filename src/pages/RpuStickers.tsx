@@ -332,7 +332,7 @@ export function RpuStickersPage() {
       {/* ─── Workspace ─── */}
       <div className="flex-1 min-h-0 flex">
         {/* Canvas */}
-        <div className="flex-1 min-w-0 relative">
+        <div className="flex-1 min-w-0 relative flex">
           <RpuLayoutCanvas
             drone={effectiveDrone}
             stickers={positions}
