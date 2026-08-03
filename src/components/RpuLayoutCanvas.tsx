@@ -6,6 +6,8 @@ interface StickerSlot {
   id: string;
   xMm: number;
   yMm: number;
+  wMm: number;
+  hMm: number;
   serial: string;
   logoUrl?: string;
 }
@@ -50,6 +52,7 @@ function Marker({ slot, drone, scale, isSelected, onPointerDown, logoUrl }: {
   logoUrl?: string;
 }) {
   const src = slot.logoUrl || logoUrl;
+  const isVertical = slot.hMm > slot.wMm;
   return (
     <div
       onPointerDown={(e) => onPointerDown(e, slot)}
@@ -57,8 +60,8 @@ function Marker({ slot, drone, scale, isSelected, onPointerDown, logoUrl }: {
       style={{
         left: slot.xMm * scale,
         top: slot.yMm * scale,
-        width: drone.stickerWidthMm * scale,
-        height: drone.stickerHeightMm * scale,
+        width: slot.wMm * scale,
+        height: slot.hMm * scale,
       }}
     >
       <div
@@ -68,20 +71,34 @@ function Marker({ slot, drone, scale, isSelected, onPointerDown, logoUrl }: {
         )}
         style={{ boxShadow: '0 3px 8px rgba(0,0,0,0.4), 0 12px 28px rgba(0,0,0,0.28)' }}
       >
-        <div className="w-full h-full flex flex-col items-center justify-center px-[4%]">
-          {src && (
-            <img src={src} alt="logo" className="max-h-[26%] max-w-[60%] mb-[2%] object-contain pointer-events-none" draggable={false} />
-          )}
-          <span className="text-[8px] font-bold tracking-wider text-[#0284c7] bg-[#0284c7]/10 rounded px-1 py-px leading-none mb-[2%]">
-            RPU
-          </span>
-          <span className="text-[9px] font-semibold text-neutral-900 leading-tight text-center truncate w-full">
-            {drone.brand} {drone.name}
-          </span>
-          <span className="text-[8px] font-mono text-neutral-500 leading-tight text-center truncate w-full">
-            {slot.serial}
-          </span>
-        </div>
+        {isVertical ? (
+          <div className="w-full h-full flex flex-col items-center justify-start pt-[6%] gap-[3%]">
+            <span className="text-[7px] font-bold tracking-wider text-[#0284c7] bg-[#0284c7]/10 rounded px-1 py-px leading-none">
+              RPU
+            </span>
+            <span className="text-[8px] font-semibold text-neutral-900 leading-tight text-center truncate w-full px-[8%]">
+              {drone.brand} {drone.name}
+            </span>
+            <span className="text-[7px] font-mono text-neutral-500 leading-tight text-center truncate w-full px-[8%]">
+              {slot.serial}
+            </span>
+          </div>
+        ) : (
+          <div className="w-full h-full flex flex-col items-center justify-center px-[4%]">
+            {src && (
+              <img src={src} alt="logo" className="max-h-[26%] max-w-[60%] mb-[2%] object-contain pointer-events-none" draggable={false} />
+            )}
+            <span className="text-[8px] font-bold tracking-wider text-[#0284c7] bg-[#0284c7]/10 rounded px-1 py-px leading-none mb-[2%]">
+              RPU
+            </span>
+            <span className="text-[9px] font-semibold text-neutral-900 leading-tight text-center truncate w-full">
+              {drone.brand} {drone.name}
+            </span>
+            <span className="text-[8px] font-mono text-neutral-500 leading-tight text-center truncate w-full">
+              {slot.serial}
+            </span>
+          </div>
+        )}
         {isSelected && (
           <>
             {(['nw', 'ne', 'sw', 'se'] as const).map(h => (
@@ -116,8 +133,7 @@ export const RpuLayoutCanvas = ({ drone, stickers, onMove, onSelect, selectedId,
   const dragOffRef = useRef({ dx: 0, dy: 0 });
   const rafRef = useRef<number>(0);
   const pendingPosRef = useRef<{ id: string; xMm: number; yMm: number } | null>(null);
-  const dimsRef = useRef({ w: drone.stickerWidthMm, h: drone.stickerHeightMm });
-  dimsRef.current = { w: drone.stickerWidthMm, h: drone.stickerHeightMm };
+  const dragDimsRef = useRef({ w: 40, h: 20 });
   const panRef = useRef<{ x: number; y: number; tx: number; ty: number } | null>(null);
 
   useEffect(() => {
@@ -192,7 +208,7 @@ export const RpuLayoutCanvas = ({ drone, stickers, onMove, onSelect, selectedId,
     if (!dragIdRef.current || !sheetRef.current) return;
     const sheetRect = sheetRef.current.getBoundingClientRect();
     const s = baseScaleRef.current * viewRef.current.scale;
-    const { w, h } = dimsRef.current;
+    const { w, h } = dragDimsRef.current;
     const mx = e.clientX - sheetRect.left;
     const my = e.clientY - sheetRect.top;
     const xMm = Math.max(0, Math.min(A4_W - w, mx / s + dragOffRef.current.dx));
@@ -219,6 +235,7 @@ export const RpuLayoutCanvas = ({ drone, stickers, onMove, onSelect, selectedId,
       dx: (e.clientX - sheetRect.left - markerRect.left) / s - slot.xMm,
       dy: (e.clientY - sheetRect.top - markerRect.top) / s - slot.yMm,
     };
+    dragDimsRef.current = { w: slot.wMm, h: slot.hMm };
     dragIdRef.current = slot.id;
     onSelect?.(slot.id);
     window.addEventListener('pointermove', handlePointerMove);
