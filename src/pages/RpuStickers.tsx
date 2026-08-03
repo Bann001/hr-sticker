@@ -129,14 +129,15 @@ export function RpuStickersPage() {
     const perRow = Math.max(1, Math.floor(availableW / (stickerW + gap)));
     const next: StickerSlot[] = [];
     let idx = 0;
+    let row = 0;
     while (idx < slots.length) {
+      const yMm = pad + row * (stickerH + gap);
+      if (yMm + stickerH > 297) break;
       for (let col = 0; col < perRow && idx < slots.length; col++, idx++) {
-        const row = Math.floor(idx / perRow);
         const xMm = pad + col * (stickerW + gap);
-        const yMm = pad + row * (stickerH + gap);
-        if (yMm + stickerH > 297) break;
         next.push({ ...slots[idx], xMm, yMm });
       }
+      row++;
     }
     setPositions(next);
   }, [slots, stickerW, stickerH]);

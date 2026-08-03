@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { cn } from '../../lib/utils';
 import { useAuth } from '../../lib/auth';
 
@@ -18,6 +19,7 @@ export const navItems: Array<{ id: string; label: string; icon: string; selected
 
 export function NavSidebar({ activeTab, onTabChange }: { activeTab: string; onTabChange: (tab: string) => void }) {
   const { profile, isAdmin, pageSettings, signOut } = useAuth();
+  const [collapsed, setCollapsed] = useState(false);
 
   const visibleItems = navItems.filter(item => {
     if (isAdmin) return true;
@@ -25,45 +27,58 @@ export function NavSidebar({ activeTab, onTabChange }: { activeTab: string; onTa
     return setting?.visible ?? true;
   });
 
-  const adminItem = { id: 'admin', label: 'Admin', icon: 'Shield' };
+  const adminItem: { id: string; label: string; icon: string; version?: string; badge?: string } = { id: 'admin', label: 'Admin', icon: 'Shield' };
+
+  const allItems = isAdmin ? [...visibleItems, adminItem] : visibleItems;
 
   return (
-    <aside className="w-[250px] min-w-[250px] bg-bg-sidebar flex flex-col h-full rounded-r-[20px] border-r border-border overflow-hidden">
+    <aside
+      className={cn(
+        'bg-bg-sidebar flex flex-col h-full rounded-r-[20px] border-r border-border overflow-hidden transition-[width] duration-200 ease-out',
+        collapsed ? 'w-[68px] min-w-[68px]' : 'w-[232px] min-w-[232px]',
+      )}
+    >
       {/* Logo area */}
-      <div className="px-5 pt-6 pb-5">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-xl bg-accent flex items-center justify-center">
+      <div className={cn('pt-6 pb-5', collapsed ? 'px-0 flex justify-center' : 'px-5')}>
+        <div className={cn('flex items-center', collapsed ? 'flex-col gap-1' : 'gap-3')}>
+          <div className="w-8 h-8 rounded-xl bg-accent flex items-center justify-center shrink-0">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#111111" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
               <polyline points="10 17 15 12 10 7" />
               <line x1="15" y1="12" x2="3" y2="12" />
             </svg>
           </div>
-          <div className="flex flex-col">
-            <span className="text-sm font-semibold text-text-primary tracking-tight">Sticker Lab</span>
-            <span className="text-[11px] text-text-muted">Workspace</span>
-          </div>
+          {!collapsed && (
+            <div className="flex flex-col min-w-0">
+              <span className="text-sm font-semibold text-text-primary tracking-tight truncate">Sticker Lab</span>
+              <span className="text-[11px] text-text-muted">Workspace</span>
+            </div>
+          )}
         </div>
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 px-3 py-2 space-y-0.5 overflow-y-auto">
-        {visibleItems.map((item) => {
+      <nav className={cn('flex-1 py-2 space-y-1 overflow-y-auto', collapsed ? 'px-3' : 'px-3')}>
+        {allItems.map((item) => {
           const isActive = item.id === activeTab;
           return (
             <button
               key={item.id}
               onClick={() => onTabChange(item.id)}
+              title={collapsed ? item.label : undefined}
               className={cn(
-                'w-full h-11 flex items-center gap-3 px-3 rounded-xl text-sm font-medium transition-all duration-150 ease-out',
+                'w-full flex items-center gap-3 rounded-lg text-sm font-medium transition-all duration-150 ease-out relative',
+                collapsed ? 'h-10 justify-center px-0' : 'h-9 px-3',
                 isActive
-                  ? 'bg-accent text-selected-text'
+                  ? collapsed
+                    ? 'bg-accent text-selected-text'
+                    : 'bg-accent text-selected-text shadow-sm'
                   : 'text-text-secondary hover:text-text-primary hover:bg-bg-surface',
               )}
             >
-              <NavIcon name={item.icon} className="w-[18px] h-[18px] shrink-0" />
-              <span className="flex-1 text-left">{item.label}</span>
-              {item.badge && (
+              <NavIcon name={item.icon} className={cn('w-[18px] h-[18px] shrink-0', collapsed ? '' : '')} />
+              {!collapsed && <span className="flex-1 text-left truncate">{item.label}</span>}
+              {!collapsed && item.badge && (
                 <span className={cn(
                   'text-[11px] font-semibold px-2 py-0.5 rounded-full leading-none',
                   isActive ? 'bg-selected-text/15 text-selected-text' : 'bg-accent/15 text-accent',
@@ -71,52 +86,58 @@ export function NavSidebar({ activeTab, onTabChange }: { activeTab: string; onTa
                   {item.badge}
                 </span>
               )}
-              {item.version && (
+              {!collapsed && item.version && (
                 <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-success/15 text-success leading-none">
                   v{item.version}
                 </span>
               )}
+              {collapsed && isActive && (
+                <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-4 bg-selected-text rounded-full" />
+              )}
             </button>
           );
         })}
-
-        {/* Admin link */}
-        {isAdmin && (
-          <button
-            onClick={() => onTabChange('admin')}
-            className={cn(
-              'w-full h-11 flex items-center gap-3 px-3 rounded-xl text-sm font-medium transition-all duration-150 ease-out',
-              activeTab === 'admin'
-                ? 'bg-accent text-selected-text'
-                : 'text-text-secondary hover:text-text-primary hover:bg-bg-surface',
-            )}
-          >
-            <NavIcon name="Shield" className="w-[18px] h-[18px] shrink-0" />
-            <span className="flex-1 text-left">Admin</span>
-          </button>
-        )}
       </nav>
 
       {/* Bottom area - User info + Logout */}
-      <div className="px-3 py-4 border-t border-border">
-        <div className="flex items-center gap-3 px-3 py-2">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-accent/40 to-accent/10 flex items-center justify-center text-xs font-bold text-accent">
+      <div className={cn('py-3 border-t border-border', collapsed ? 'px-3' : 'px-3')}>
+        <div className={cn('flex items-center', collapsed ? 'flex-col gap-2' : 'gap-2 px-2 py-1.5')}>
+          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-accent/40 to-accent/10 flex items-center justify-center text-xs font-bold text-accent shrink-0">
             {profile?.email?.charAt(0).toUpperCase() || 'U'}
           </div>
-          <div className="flex-1 min-w-0">
-            <div className="text-sm font-medium text-text-primary truncate">{profile?.email || 'User'}</div>
-            <div className="text-[11px] text-text-muted">{profile?.role === 'admin' ? 'Admin' : 'User'}</div>
-          </div>
+          {!collapsed && (
+            <>
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-medium text-text-primary truncate">{profile?.email || 'User'}</div>
+                <div className="text-[11px] text-text-muted">{profile?.role === 'admin' ? 'Admin' : 'User'}</div>
+              </div>
+              <button
+                onClick={signOut}
+                className="w-8 h-8 rounded-lg flex items-center justify-center text-text-muted hover:text-danger hover:bg-danger/5 transition-all"
+                title="Sign out"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                  <polyline points="16 17 21 12 16 7" />
+                  <line x1="21" y1="12" x2="9" y2="12" />
+                </svg>
+              </button>
+            </>
+          )}
           <button
-            onClick={signOut}
-            className="w-8 h-8 rounded-lg flex items-center justify-center text-text-muted hover:text-danger hover:bg-danger/5 transition-all"
-            title="Sign out"
+            onClick={() => setCollapsed(c => !c)}
+            className={cn(
+              'flex items-center justify-center text-text-muted hover:text-text-primary hover:bg-bg-surface rounded-lg transition-all',
+              collapsed ? 'w-8 h-8' : 'w-full h-8 gap-2',
+            )}
+            title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-              <polyline points="16 17 21 12 16 7" />
-              <line x1="21" y1="12" x2="9" y2="12" />
+              {collapsed
+                ? <><polyline points="9 18 15 12 9 6" /></>
+                : <><polyline points="15 18 9 12 15 6" /></>}
             </svg>
+            {!collapsed && <span className="text-xs">Collapse</span>}
           </button>
         </div>
       </div>
