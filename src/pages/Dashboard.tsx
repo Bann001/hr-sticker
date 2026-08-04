@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { cn } from '../lib/utils';
 import { supabase } from '../supabase';
 import { loadRuns } from '../utils/rpuRuns';
+import { ScrollReveal, StaggerContainer, StaggerItem } from '../components/ui/scroll-reveal';
 
 interface DashboardStats {
   designs: number;
@@ -42,7 +43,6 @@ export function DashboardPage() {
         rpuRuns: rpuRuns.length,
       });
 
-      // Recent activity
       const activities: Activity[] = [];
 
       if (batchesRes.data) {
@@ -129,55 +129,80 @@ export function DashboardPage() {
   ];
 
   return (
-    <div className="flex-1 min-w-0 overflow-y-auto bg-bg-primary">
-      <div className="max-w-5xl mx-auto p-8">
-        <div className="mb-8">
-          <h1 className="text-2xl font-bold text-text-primary tracking-tight">
-            Welcome back to{' '}
-            <span className="text-accent">Sticker Lab</span>
-          </h1>
-          <p className="text-sm text-text-muted mt-1">
-            Here's what's happening with your workspace today.
-          </p>
-        </div>
+    <div className="flex-1 min-w-0 overflow-y-auto bg-bg-primary relative">
+      <div className="absolute inset-0 pointer-events-none" aria-hidden="true">
+        <div className="absolute top-0 left-1/4 w-[600px] h-[600px] bg-accent/[0.03] rounded-full blur-[120px]" />
+        <div className="absolute bottom-0 right-1/4 w-[400px] h-[400px] bg-sky-500/[0.02] rounded-full blur-[100px]" />
+      </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
-          {statCards.map((stat) => (
-            <div key={stat.label} className="bg-bg-surface border border-border rounded-2xl p-5 relative overflow-hidden group">
-              <div className="absolute top-0 right-0 w-24 h-24 bg-accent/5 rounded-full -translate-y-8 translate-x-8 transition-transform group-hover:scale-110 duration-300" />
-              <div className="relative">
-                <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center text-accent mb-4">
-                  {stat.icon}
-                </div>
-                <div className="text-3xl font-bold text-accent mb-1">
-                  {stat.value.toLocaleString()}
-                </div>
-                <div className="text-sm text-text-muted">{stat.label}</div>
+      <div className="max-w-5xl mx-auto p-8 relative z-10">
+        <ScrollReveal>
+          <div className="mb-10">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-10 h-10 rounded-xl bg-accent/15 flex items-center justify-center text-accent">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" /><polyline points="14 2 14 8 20 8" />
+                </svg>
               </div>
+              <h1 className="text-2xl font-bold text-text-primary tracking-tight">
+                Welcome back to <span className="text-accent">Sticker Lab</span>
+              </h1>
             </div>
-          ))}
-        </div>
-
-        <section>
-          <h2 className="text-lg font-semibold text-text-primary mb-4">Recent Activity</h2>
-          <div className="bg-bg-surface border border-border rounded-2xl divide-y divide-border">
-            {recent.length === 0 ? (
-              <div className="px-5 py-8 text-center text-sm text-text-muted">No activity yet</div>
-            ) : (
-              recent.map((activity, i) => (
-                <div key={i} className="flex items-center gap-4 px-5 py-4 hover:bg-white/[0.02] transition-colors">
-                  <div className={cn(
-                    'w-2 h-2 rounded-full shrink-0',
-                    activity.type === 'batch' ? 'bg-accent' :
-                    activity.type === 'rpu' ? 'bg-sky-500' : 'bg-success',
-                  )} />
-                  <p className="flex-1 text-sm text-text-primary">{activity.message}</p>
-                  <span className="text-xs text-text-muted shrink-0">{activity.time}</span>
-                </div>
-              ))
-            )}
+            <p className="text-sm text-text-muted ml-[52px]">Here's what's happening with your workspace today.</p>
           </div>
-        </section>
+        </ScrollReveal>
+
+        <ScrollReveal>
+          <StaggerContainer className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
+            {statCards.map((stat) => (
+              <StaggerItem key={stat.label}>
+                <div className="bg-bg-surface border border-border rounded-2xl p-5 relative overflow-hidden group">
+                  <div className="absolute top-0 right-0 w-24 h-24 bg-accent/5 rounded-full -translate-y-8 translate-x-8 transition-transform group-hover:scale-110 duration-500" />
+                  <div className="absolute inset-0 bg-gradient-to-br from-white/[0.02] to-transparent pointer-events-none" />
+                  <div className="relative">
+                    <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center text-accent mb-4 group-hover:bg-accent/15 transition-colors duration-300">
+                      {stat.icon}
+                    </div>
+                    <div className="text-3xl font-bold text-accent mb-1">
+                      {stat.value.toLocaleString()}
+                    </div>
+                    <div className="text-sm text-text-muted">{stat.label}</div>
+                  </div>
+                </div>
+              </StaggerItem>
+            ))}
+          </StaggerContainer>
+        </ScrollReveal>
+
+        <ScrollReveal>
+          <section>
+            <div className="flex items-center gap-3 mb-4">
+              <h2 className="text-lg font-semibold text-text-primary">Recent Activity</h2>
+              <div className="h-px flex-1 bg-border" />
+            </div>
+            <div className="bg-bg-surface border border-border rounded-2xl divide-y divide-border overflow-hidden">
+              {recent.length === 0 ? (
+                <div className="px-5 py-8 text-center text-sm text-text-muted">No activity yet</div>
+              ) : (
+                <StaggerContainer staggerDelay={0.06}>
+                  {recent.map((activity) => (
+                    <StaggerItem key={activity.created_at + activity.message}>
+                      <div className="flex items-center gap-4 px-5 py-4 hover:bg-white/[0.02] transition-colors">
+                        <div className={cn(
+                          'w-2 h-2 rounded-full shrink-0',
+                          activity.type === 'batch' ? 'bg-accent' :
+                          activity.type === 'rpu' ? 'bg-sky-500' : 'bg-success',
+                        )} />
+                        <p className="flex-1 text-sm text-text-primary">{activity.message}</p>
+                        <span className="text-xs text-text-muted shrink-0">{activity.time}</span>
+                      </div>
+                    </StaggerItem>
+                  ))}
+                </StaggerContainer>
+              )}
+            </div>
+          </section>
+        </ScrollReveal>
       </div>
     </div>
   );

@@ -8,6 +8,7 @@ import { Preview } from '../components/Preview';
 import { generatePDFFromDesign } from '../utils/pdf';
 import { renderDesign } from '../utils/renderDesign';
 import { Card, CardContent } from '../components/ui/card';
+import { ScrollReveal, StaggerContainer, StaggerItem } from '../components/ui/scroll-reveal';
 
 interface BatchRow {
   id: string;
@@ -179,7 +180,11 @@ export function TasksPage({
   }
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full relative">
+      <div className="absolute inset-0 pointer-events-none" aria-hidden="true">
+        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-accent/[0.02] rounded-full blur-[100px]" />
+      </div>
+
       {/* Header */}
       <header className="h-[72px] min-h-[72px] bg-bg-sidebar border-b border-border flex items-center gap-3 px-5">
         {/* Search */}
@@ -332,58 +337,63 @@ export function TasksPage({
         )}
 
         {/* Batch list */}
-        <div className="space-y-3">
-          {filteredBatches.length === 0 && (
-            <div className="bg-bg-surface border border-border rounded-2xl p-8 flex items-center justify-center">
-              <div className="text-center">
-                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#727272" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="mx-auto mb-3">
-                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2" /><line x1="3" y1="9" x2="21" y2="9" /><line x1="9" y1="21" x2="9" y2="9" />
-                </svg>
-                <p className="text-sm text-text-muted">{batches.length === 0 ? 'No batches yet' : 'No batches match your filter'}</p>
-                <p className="text-xs text-text-muted mt-1">
-                  {batches.length === 0 ? 'Click New Batch to generate your first sticker batch' : 'Try changing the filter or search query'}
-                </p>
-              </div>
-            </div>
-          )}
-          {filteredBatches.map((batch) => (
-            <div
-              key={batch.id}
-              className="bg-bg-surface border border-border rounded-2xl p-5 flex items-center gap-5 hover:border-accent/20 transition-colors"
-            >
-              <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
-                batch.status === 'completed' ? 'bg-success/10' :
-                batch.status === 'pending' ? 'bg-accent/10' : 'bg-danger/10'
-              }`}>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={
-                  batch.status === 'completed' ? '#34D399' :
-                  batch.status === 'pending' ? '#FFB800' : '#F44336'
-                } strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  {batch.status === 'completed' ? <><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" /><polyline points="22 4 12 14.01 9 11.01" /></> :
-                   batch.status === 'pending' ? <><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></> :
-                   <><circle cx="12" cy="12" r="10" /><line x1="15" y1="9" x2="9" y2="15" /><line x1="9" y1="9" x2="15" y2="15" /></>}
-                </svg>
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-3">
-                  <span className="text-sm font-semibold text-text-primary">BCH-{String(filteredBatches.indexOf(batch) + 1).padStart(3, '0')}</span>
-                  <span className={`text-xs font-semibold px-2.5 py-0.5 rounded-full ${
-                    batch.status === 'completed' ? 'bg-success/10 text-success border border-success/20' :
-                    batch.status === 'pending' ? 'bg-accent/10 text-accent border border-accent/20' :
-                    'bg-danger/10 text-danger border border-danger/20'
-                  }`}>
-                    {batch.status.charAt(0).toUpperCase() + batch.status.slice(1)}
-                  </span>
+        <ScrollReveal>
+          <div className="space-y-3">
+            {filteredBatches.length === 0 && (
+              <div className="bg-bg-surface border border-border rounded-2xl p-8 flex items-center justify-center">
+                <div className="text-center">
+                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#727272" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="mx-auto mb-3">
+                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2" /><line x1="3" y1="9" x2="21" y2="9" /><line x1="9" y1="21" x2="9" y2="9" />
+                  </svg>
+                  <p className="text-sm text-text-muted">{batches.length === 0 ? 'No batches yet' : 'No batches match your filter'}</p>
+                  <p className="text-xs text-text-muted mt-1">
+                    {batches.length === 0 ? 'Click New Batch to generate your first sticker batch' : 'Try changing the filter or search query'}
+                  </p>
                 </div>
-                <p className="text-sm text-text-secondary mt-0.5">{batch.products?.name || 'Custom design'}</p>
-                <p className="text-xs text-text-muted mt-0.5">{batch.quantity} stickers · BT: {batch.batch_code}{String(batch.start_serial).padStart(5, '0')}–{batch.batch_code}{String(batch.end_serial).padStart(5, '0')}</p>
               </div>
-              <div className="text-xs text-text-muted text-right shrink-0">
-                <div>{new Date(batch.created_at).toLocaleDateString()}</div>
-              </div>
-            </div>
-          ))}
-        </div>
+            )}
+            <StaggerContainer staggerDelay={0.05}>
+              {filteredBatches.map((batch) => (
+                <StaggerItem key={batch.id}>
+                  <div
+                    className="bg-bg-surface border border-border rounded-2xl p-5 flex items-center gap-5 hover:border-accent/20 transition-all duration-300 hover:bg-bg-surface/80"
+                  >
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
+                      batch.status === 'completed' ? 'bg-success/10' :
+                      batch.status === 'pending' ? 'bg-accent/10' : 'bg-danger/10'
+                    }`}>
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={
+                        batch.status === 'completed' ? '#34D399' :
+                        batch.status === 'pending' ? '#FFB800' : '#F44336'
+                      } strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        {batch.status === 'completed' ? <><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" /><polyline points="22 4 12 14.01 9 11.01" /></> :
+                         batch.status === 'pending' ? <><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></> :
+                         <><circle cx="12" cy="12" r="10" /><line x1="15" y1="9" x2="9" y2="15" /><line x1="9" y1="9" x2="15" y2="15" /></>}
+                      </svg>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-3">
+                        <span className="text-sm font-semibold text-text-primary">BCH-{String(filteredBatches.indexOf(batch) + 1).padStart(3, '0')}</span>
+                        <span className={`text-xs font-semibold px-2.5 py-0.5 rounded-full ${
+                          batch.status === 'completed' ? 'bg-success/10 text-success border border-success/20' :
+                          batch.status === 'pending' ? 'bg-accent/10 text-accent border border-accent/20' :
+                          'bg-danger/10 text-danger border border-danger/20'
+                        }`}>
+                          {batch.status.charAt(0).toUpperCase() + batch.status.slice(1)}
+                        </span>
+                      </div>
+                      <p className="text-sm text-text-secondary mt-0.5">{batch.products?.name || 'Custom design'}</p>
+                      <p className="text-xs text-text-muted mt-0.5">{batch.quantity} stickers · BT: {batch.batch_code}{String(batch.start_serial).padStart(5, '0')}–{batch.batch_code}{String(batch.end_serial).padStart(5, '0')}</p>
+                    </div>
+                    <div className="text-xs text-text-muted text-right shrink-0">
+                      <div>{new Date(batch.created_at).toLocaleDateString()}</div>
+                    </div>
+                  </div>
+                </StaggerItem>
+              ))}
+            </StaggerContainer>
+          </div>
+        </ScrollReveal>
       </div>
     </div>
   );

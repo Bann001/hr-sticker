@@ -10,6 +10,7 @@ import type { RpuRun } from '../utils/rpuRuns';
 import { saveDesign as saveDesignToSupabase, loadDesigns as loadDesignsFromSupabase } from '../lib/designs';
 import type { DesignElement } from '../types';
 import { LABEL_SIZES, packSheet, packSheetGrid, breakdown, type PlacedSticker, type LabelSize } from '../utils/rpuLayout';
+import { ScrollReveal, StaggerContainer, StaggerItem } from '../components/ui/scroll-reveal';
 
 const STORAGE = 'rpu-assets';
 
@@ -345,7 +346,11 @@ export function RpuStickersPage() {
       </div>
 
       {/* ─── Workspace ─── */}
-      <div className="flex-1 min-h-0 flex">
+      <div className="flex-1 min-h-0 flex relative">
+        <div className="absolute inset-0 pointer-events-none" aria-hidden="true">
+          <div className="absolute top-1/4 left-1/3 w-[500px] h-[500px] bg-accent/[0.02] rounded-full blur-[120px]" />
+        </div>
+
         {/* Canvas */}
         <div className="flex-1 min-w-0 relative flex">
           <RpuLayoutCanvas
@@ -415,9 +420,10 @@ export function RpuStickersPage() {
               </div>
 
               {/* Cards */}
-              <div className="flex-1 overflow-y-auto p-3 space-y-2.5 min-h-0">
-                {/* RPU & SN Metadata */}
-                <InspectorCard
+              <ScrollReveal>
+                <div className="flex-1 overflow-y-auto p-3 space-y-2.5 min-h-0">
+                  {/* RPU & SN Metadata */}
+                  <InspectorCard
                   title="RPU & Serial Number"
                   open={openCards.meta}
                   onToggle={() => toggleCard('meta')}
@@ -587,8 +593,9 @@ export function RpuStickersPage() {
                       </div>
                     </div>
                   )}
-                </InspectorCard>
-              </div>
+                  </InspectorCard>
+                </div>
+              </ScrollReveal>
 
               {/* Primary CTA */}
               <div className="p-3 border-t border-white/[0.07] shrink-0">
